@@ -30,6 +30,10 @@ export interface Contributor {
   rank: number
   name: string
   email: string
+  contributionScore: number
+  totalChanges: number
+  averageChange: number
+  netAdditions: number
   commits: number
   additions?: number
   deletions?: number

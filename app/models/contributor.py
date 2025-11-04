@@ -24,6 +24,23 @@ class Contributor:
     def total_changes(self) -> int:
         """总代码变更量"""
         return self.additions + self.deletions
+
+    @property
+    def contribution_score(self) -> int:
+        """贡献度分值（基于代码变更量）"""
+        return self.total_changes
+
+    @property
+    def net_additions(self) -> int:
+        """净新增行数（新增 - 删除）"""
+        return self.additions - self.deletions
+
+    @property
+    def average_change(self) -> float:
+        """单次提交平均变更行数"""
+        if self.commits == 0:
+            return 0.0
+        return self.total_changes / self.commits
     
     def add_commit(self, commit: 'Commit'):
         """添加一个 commit 的统计"""

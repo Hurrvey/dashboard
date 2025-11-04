@@ -54,7 +54,7 @@ export async function fetchDashboardData(projects: string[], options: FetchOptio
 /**
  * 获取贡献者列表
  * @param projects 项目列表
- * @returns 贡献者数组，按 commit 数量降序排列
+ * @returns 贡献者数组，按贡献度降序排列
  */
 export async function fetchContributors(projects: string[], options: FetchOptions = {}): Promise<Contributor[]> {
   try {
@@ -78,7 +78,19 @@ export async function fetchContributors(projects: string[], options: FetchOption
     
     // 后端返回格式: { code, message, data }
     if (result.code === 200) {
-      return result.data
+      const list = Array.isArray(result.data) ? result.data : []
+      return list.map((item: any) => ({
+        rank: item.rank,
+        name: item.name,
+        email: item.email,
+        contributionScore: item.contribution_score ?? 0,
+        totalChanges: item.total_changes ?? 0,
+        averageChange: item.average_change ?? 0,
+        netAdditions: item.net_additions ?? 0,
+        commits: item.commits ?? 0,
+        additions: item.additions ?? 0,
+        deletions: item.deletions ?? 0,
+      }))
     } else {
       throw new Error(result.message || '获取数据失败')
     }

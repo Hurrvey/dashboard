@@ -127,44 +127,50 @@ def calculate_overtime_ratio(commits: List[Commit]) -> float:
 
 
 def calculate_contributors(commits: List[Commit]) -> List[Dict[str, Any]]:
-    """
-    统计贡献者列表
-    
-    Returns:
-        按 commits 数量降序排列的贡献者列表
-    """
+    """统计贡献者列表，基于代码变更量计算贡献度"""
+
     from app.models.contributor import Contributor
-    
-    # 按邮箱分组统计
-    contributors_map = {}
-    
+
+    contributors_map: Dict[str, Contributor] = {}
+
     for commit in commits:
         email = commit.author_email
         if email not in contributors_map:
             contributors_map[email] = Contributor(
                 name=commit.author_name,
-                email=email
+                email=email,
             )
         contributors_map[email].add_commit(commit)
-    
-    # 转换为列表并排序
+
     contributors = list(contributors_map.values())
-    contributors.sort(key=lambda c: c.commits, reverse=True)
-    
-    # 添加排名
+
+    contributors.sort(
+        key=lambda c: (
+            c.contribution_score,
+            c.additions,
+            c.commits,
+        ),
+        reverse=True,
+    )
+
+    result: List[Dict[str, Any]] = []
+
     for rank, contributor in enumerate(contributors, start=1):
         contributor.rank = rank
-    
-    # 转换为字典格式
-    return [
-        {
-            "rank": c.rank,
-            "name": c.name,
-            "email": c.email,
-            "commits": c.commits,
-            "additions": c.additions,
-            "deletions": c.deletions
-        }
-        for c in contributors
-    ]
+        result.append(
+            {
+                "rank": contributor.rank,
+                "name": contributor.name,
+                "email": contributor.email,
+                "contribution_score": contributor.contribution_score,
+                "total_changes": contributor.total_changes,
+                "average_change": round(contributor.average_change, 2),
+                "net_additions": contributor.net_additions,
+                "commits": contributor.commits,
+                "additions": contributor.additions,
+                "deletions": contributor.deletions,
+            }
+        )
+
+    return result
 

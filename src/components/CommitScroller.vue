@@ -13,10 +13,19 @@
           <div class="info">
             <div class="name">{{ contributor.name }}</div>
             <div class="email">{{ contributor.email }}</div>
-          </div>
-          <div class="commits">
-            <span class="count">{{ contributor.commits }}</span>
-            <span class="label">commits</span>
+            <div class="metrics">
+              <div class="metric-major">
+                <span class="value">{{ formatNumber(contributor.contributionScore) }}</span>
+                <span class="label">贡献行数</span>
+              </div>
+              <div class="metric-detail">
+                <span>新增 {{ formatNumber(contributor.additions ?? 0) }}</span>
+                <span>删除 {{ formatNumber(contributor.deletions ?? 0) }}</span>
+                <span>净增 {{ formatSigned(contributor.netAdditions ?? 0) }}</span>
+                <span>提交 {{ contributor.commits }}</span>
+                <span>平均 {{ formatAverage(contributor.averageChange) }}/次</span>
+              </div>
+            </div>
           </div>
         </div>
       </transition-group>
@@ -37,6 +46,23 @@ const props = defineProps<{
 
 const currentIndex = ref(0)
 const pageSize = 6 // 每页显示 6 个
+
+const numberFormatter = new Intl.NumberFormat('zh-CN', {
+  maximumFractionDigits: 0,
+})
+
+const decimalFormatter = new Intl.NumberFormat('zh-CN', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
+const formatNumber = (value: number) => numberFormatter.format(Math.max(0, Math.round(value ?? 0)))
+const formatAverage = (value: number) => decimalFormatter.format(Math.max(0, value ?? 0))
+const formatSigned = (value: number) => {
+  if (!value) return '0'
+  const prefix = value > 0 ? '+' : '-'
+  return `${prefix}${numberFormatter.format(Math.abs(Math.round(value)))}`
+}
 
 // 当前可见的贡献者
 const visibleContributors = computed(() => {
@@ -139,36 +165,62 @@ onUnmounted(() => {
     
     .info {
       flex: 1;
-      
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
       .name {
         font-size: 1.5em;
         color: #fff;
-        margin-bottom: 8px;
       }
-      
+
       .email {
         font-size: 0.9em;
         color: #999;
       }
-    }
-    
-    .commits {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-left: 30px;
-      
-      .count {
-        font-size: 2.5em;
-        font-family: 'vcr-osd', monospace;
-        color: #4CAF50;
-        font-weight: bold;
-      }
-      
-      .label {
-        font-size: 0.9em;
-        color: #999;
-        margin-top: 5px;
+
+      .metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .metric-major {
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+
+          .value {
+            font-size: 2.4em;
+            font-family: 'vcr-osd', monospace;
+            color: #4CAF50;
+            font-weight: bold;
+          }
+
+          .label {
+            font-size: 1em;
+            color: #9acd32;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+        }
+
+        .metric-detail {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 8px 12px;
+          font-size: 0.85em;
+          color: #bbb;
+
+          span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 6px 10px;
+          }
+        }
       }
     }
   }
