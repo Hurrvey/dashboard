@@ -1,0 +1,100 @@
+version: '3.8'
+
+# CODE996 数据看板 - Docker Compose 配置
+services:
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: code996-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - code996-network
+
+  # 后端服务（包含前端静态文件）
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: code996-backend
+    restart: unless-stopped
+    ports:
+      - "9970:9970"
+    environment:
+      # Flask 配置
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      
+      # Redis 配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      
+      # Git 配置
+      - GIT_WORKSPACE=/app/repos
+      - GIT_MAX_DEPTH=1000
+      
+      # 缓存配置
+      - CACHE_TTL=300
+      
+      # 性能配置
+      - MAX_WORKERS=5
+      - MAX_PROJECTS=50
+      
+      # 日志配置
+      - LOG_LEVEL=INFO
+      - LOG_DIR=/app/logs
+    volumes:
+      # 挂载仓库目录（持久化）
+      - ./repos:/app/repos:rw
+      
+      # 挂载日志目录
+      - ./logs:/app/logs:rw
+      
+      # 挂载配置文件
+      - ./projects.json:/app/projects.json:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9970/api/dashboard/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - code996-network
+
+  # Nginx 反向代理（可选，用于生产环境）
+  nginx:
+    image: nginx:alpine
+    container_name: code996-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - code996-network
+    profiles:
+      - production  # 仅在生产环境启用
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  code996-network:
+    driver: bridge
+

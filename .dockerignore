@@ -1,0 +1,63 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# 环境变量
+.env
+.env.local
+
+# 临时文件
+*.tmp
+*.temp
+.pid
+.backend.pid
+.frontend.pid
+
+# 文档（不需要打包到镜像）
+*.md
+后端技术开发文档.md
+前端技术开发方案.txt
+使用说明.md
+
+# 测试
+backend_backup/
+backend/
+
+# 构建产物（前端会在Docker中构建）
+dist/
+

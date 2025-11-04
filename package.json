@@ -1,0 +1,23 @@
+{
+  "name": "code996-dashboard",
+  "version": "1.0.0",
+  "description": "Code996 数据看板 - 竖屏实时展示",
+  "scripts": {
+    "dev": "vite --port 3801",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^1.9.3",
+    "chart.xkcd": "^1.1.13",
+    "sass": "^1.43.3",
+    "typescript": "^4.4.3",
+    "vite": "^2.6.4",
+    "vue": "^3.2.33",
+    "vue-router": "^4.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.33"
+  }
+}
+

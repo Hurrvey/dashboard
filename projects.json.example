@@ -1,0 +1,50 @@
+{
+  "_comment": "CODE996 数据看板 - 项目配置文件示例",
+  "_说明": {
+    "用途": "配置项目名称到 Git 仓库路径的映射",
+    "格式": "项目名称: 仓库路径或URL",
+    "支持类型": [
+      "✅ 远程Git URL: https://github.com/user/repo.git (推荐)",
+      "✅ 相对路径: 相对于工作目录（默认 ./repos/）",
+      "✅ 绝对路径: 使用系统绝对路径",
+      "✅ 直接在URL中使用完整Git URL"
+    ],
+    "使用方法": [
+      "方式1 - 配置文件方式:",
+      "  1. 复制此文件为 projects.json",
+      "  2. 添加项目配置（支持远程URL或本地路径）",
+      "  3. 访问: http://localhost:3801/?projects=project-name",
+      "",
+      "方式2 - 直接使用URL（无需配置）:",
+      "  访问: http://localhost:3801/?projects=https://github.com/user/repo1,https://github.com/user/repo2",
+      "  系统会自动克隆远程仓库"
+    ]
+  },
+  
+  "_示例配置": "以下是不同场景的配置示例",
+  
+  "test1": "backend/repos/test1",
+  "test2": "backend/repos/test2",
+  
+  "_注释_远程Git仓库": "🌟 推荐：使用远程Git URL（首次克隆需要时间）",
+  "asr-ws-ptt": "https://github.com/Hurrvey/asr-ws-ptt",
+  "my-github-project": "https://github.com/username/repository.git",
+  "company-gitlab": "https://gitlab.com/company/project.git",
+  
+  "_注释_本地相对路径": "使用相对路径，相对于 repos/ 目录",
+  "my-project": "repos/my-project",
+  "another-project": "repos/another-project",
+  
+  "_注释_绝对路径": "使用系统绝对路径",
+  "production-app": "/var/repos/production-app",
+  "legacy-system": "D:\\Projects\\legacy-system",
+  
+  "_注释_私有仓库": "Git仓库URL（需要配置访问权限）",
+  "private-repo": "git@github.com:company/private-repo.git",
+  
+  "_使用示例": {
+    "使用配置的项目": "http://localhost:3801/?projects=test1,test2,my-github-project",
+    "直接使用Git URL": "http://localhost:3801/?projects=https://github.com/Hurrvey/asr-ws-ptt,https://gitea.zhifukj.com.cn/zhifukeji/dev-docs",
+    "混合使用": "http://localhost:3801/?projects=test1,https://github.com/user/repo"
+  }
+}
