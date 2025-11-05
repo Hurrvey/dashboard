@@ -4,8 +4,7 @@
     <div class="scroller-container" v-if="sortedContributors.length > 0">
       <div
         class="marquee-track"
-        :class="{ animate: shouldAnimate }"
-        :style="animationStyle"
+        :style="marqueeStyle"
         ref="marqueeRef"
       >
         <div
@@ -49,10 +48,14 @@ const props = defineProps<{
   contributors: Contributor[]
 }>()
 
-const SPEED_PX_PER_SEC = 30
-
 const marqueeRef = ref<HTMLDivElement | null>(null)
-const animationDuration = ref(0)
+const translateY = ref(0)
+const enableAnimation = ref(false)
+const contentHeight = ref(0)
+const SCROLL_SPEED_PX_PER_SEC = 12
+
+let animationFrameId: number | null = null
+let lastTimestamp: number | null = null
 
 const numberFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
@@ -83,46 +86,115 @@ const sortedContributors = computed(() => {
   return list
 })
 
-const shouldAnimate = computed(() => sortedContributors.value.length > 6)
-
 const marqueeContributors = computed(() => {
-  if (shouldAnimate.value) {
+  if (enableAnimation.value) {
     return [...sortedContributors.value, ...sortedContributors.value]
   }
   return sortedContributors.value
 })
 
-const animationStyle = computed(() => {
-  if (!shouldAnimate.value || animationDuration.value <= 0) {
-    return { animation: 'none' }
+const marqueeStyle = computed(() => {
+  if (!enableAnimation.value) {
+    return { transform: 'translateY(0)' }
   }
-  return { animationDuration: `${animationDuration.value}s` }
+  return {
+    transform: `translateY(-${translateY.value}px)`
+  }
 })
 
-const updateAnimation = () => {
-  if (!marqueeRef.value || !shouldAnimate.value) {
-    animationDuration.value = 0
-    return
+const stopScrolling = () => {
+  if (animationFrameId !== null) {
+    window.cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
   }
+  lastTimestamp = null
+}
+
+const step = (timestamp: number) => {
+  if (lastTimestamp === null) {
+    lastTimestamp = timestamp
+  }
+  const delta = (timestamp - lastTimestamp) / 1000
+  lastTimestamp = timestamp
+
+  translateY.value += delta * SCROLL_SPEED_PX_PER_SEC
+  const cycle = contentHeight.value
+  if (cycle > 0) {
+    while (translateY.value >= cycle) {
+      translateY.value -= cycle
+    }
+  }
+
+  animationFrameId = window.requestAnimationFrame(step)
+}
+
+const startScrolling = () => {
+  if (!enableAnimation.value || animationFrameId !== null) return
+  lastTimestamp = null
+  animationFrameId = window.requestAnimationFrame(step)
+}
+
+const updateMeasurements = () => {
+  if (!marqueeRef.value) return
+
+  const containerHeight = marqueeRef.value.parentElement?.clientHeight ?? 0
   const totalHeight = marqueeRef.value.scrollHeight
-  const distance = totalHeight / 2 // 因为列表重复了一遍
-  animationDuration.value = distance > 0 ? distance / SPEED_PX_PER_SEC : 0
+  const baseHeight = enableAnimation.value ? totalHeight / 2 : totalHeight
+
+  contentHeight.value = baseHeight
+
+  const shouldEnable = baseHeight > containerHeight + 8 && sortedContributors.value.length > 0
+
+  if (shouldEnable !== enableAnimation.value) {
+    enableAnimation.value = shouldEnable
+    translateY.value = 0
+  }
 }
 
 const handleResize = () => {
-  nextTick(() => updateAnimation())
+  nextTick(() => {
+    updateMeasurements()
+  })
 }
 
 watch(() => props.contributors, () => {
-  nextTick(() => updateAnimation())
+  nextTick(() => {
+    translateY.value = 0
+    updateMeasurements()
+  })
+})
+
+watch(enableAnimation, value => {
+  nextTick(() => {
+    if (!marqueeRef.value) {
+      stopScrolling()
+      return
+    }
+
+    if (value) {
+      const totalHeight = marqueeRef.value.scrollHeight
+      contentHeight.value = totalHeight / 2
+      startScrolling()
+    } else {
+      contentHeight.value = marqueeRef.value.scrollHeight
+      stopScrolling()
+      translateY.value = 0
+    }
+  })
 })
 
 onMounted(() => {
-  nextTick(() => updateAnimation())
+  nextTick(() => {
+    updateMeasurements()
+    if (enableAnimation.value) {
+      startScrolling()
+    }
+  })
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
+  stopScrolling()
   window.removeEventListener('resize', handleResize)
 })
 </script>
@@ -153,15 +225,7 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    animation-name: scroll-up;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-duration: 20s;
-    animation-play-state: paused;
-  }
-
-  .marquee-track.animate {
-    animation-play-state: running;
+    will-change: transform;
   }
   
   .contributor-card {
@@ -263,16 +327,6 @@ onUnmounted(() => {
       font-size: 1.5em;
       color: #999;
     }
-  }
-}
-
-@keyframes scroll-up {
-  0% {
-    transform: translateY(0);
-  }
-
-  100% {
-    transform: translateY(-50%);
   }
 }
 </style>

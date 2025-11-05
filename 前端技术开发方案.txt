@@ -1,0 +1,1023 @@
+# 数据看板项目 - 前端技术开发方案
+
+## 一、项目概述
+
+基于现有 code996 项目的多项目汇总功能，开发一个竖屏数据看板展示系统。
+数据看板用于实时展示团队的代码提交情况和 AI 编写代码的比例分析。
+
+---
+
+## 二、技术栈选型
+
+### 2.1 核心技术（继承原项目）
+- **框架**: Vue 3 (Composition API)
+- **语言**: TypeScript
+- **构建工具**: Vite 2.x
+- **样式**: SCSS
+- **图表库**: chart.xkcd 1.1.13 (像素风格手绘图表)
+- **HTTP 请求**: Fetch API / Axios
+
+### 2.2 新增依赖
+```json
+{
+  "dependencies": {
+    "axios": "^1.6.0"  // HTTP 请求库（可选，也可使用 fetch）
+  }
+}
+```
+
+---
+
+## 三、项目结构设计
+
+```
+dashboard/
+├── public/
+│   ├── favicon.ico
+│   └── fonts/                    # 像素字体资源
+│       ├── vcr-osd.ttf
+│       └── zpix.woff2
+├── src/
+│   ├── main.ts                   # 入口文件
+│   ├── App.vue                   # 根组件
+│   ├── views/
+│   │   └── Dashboard.vue         # 数据看板主视图
+│   ├── components/
+│   │   ├── charts/
+│   │   │   ├── BarChart.vue      # 柱状图组件（复用）
+│   │   │   ├── PieChart.vue      # 饼图组件（复用）
+│   │   │   └── BaseChart.vue     # 图表基础组件（复用）
+│   │   ├── AICodeRatioChart.vue  # AI 代码比例图表（新增）
+│   │   └── CommitScroller.vue    # 提交人员滚动组件（新增）
+│   ├── api/
+│   │   ├── dashboard.ts          # 仪表板相关 API
+│   │   └── types.ts              # API 类型定义
+│   ├── styles/
+│   │   ├── reset.scss            # 样式重置
+│   │   ├── common.scss           # 通用样式（复用）
+│   │   ├── variables.scss        # 变量定义
+│   │   └── dashboard.scss        # 看板专属样式
+│   └── utils/
+│       ├── request.ts            # HTTP 请求封装
+│       └── format.ts             # 数据格式化工具
+├── index.html
+├── vite.config.ts
+├── tsconfig.json
+└── package.json
+```
+
+---
+
+## 四、核心功能模块设计
+
+### 4.1 上半部分 - 数据可视化区域
+
+#### 4.1.1 总览图表区（左侧）
+**功能**：展示所有项目的汇总统计数据
+
+**图表组件**：
+1. **按小时 commit 分布图** (BarChart)
+   - 横轴：0-23 点
+   - 纵轴：commit 次数
+   - 样式：chart.xkcd 的 Bar 图
+
+2. **按天 commit 分布图** (BarChart)
+   - 横轴：周一~周日
+   - 纵轴：commit 次数
+   - 样式：chart.xkcd 的 Bar 图
+
+3. **工作/加班时间占比图** (PieChart)
+   - 数据：工作时间 vs 加班时间
+   - 样式：chart.xkcd 的 Pie 图
+
+4. **工作日/周末占比图** (PieChart)
+   - 数据：工作日 vs 周末
+   - 样式：chart.xkcd 的 Pie 图
+
+**数据来源**：
+- 接口：`GET /api/dashboard/summary`
+- 数据格式参考 code996_local.py 的多仓库汇总结果
+
+#### 4.1.2 AI 代码比例图（右侧，新增）
+**功能**：展示所有项目中 AI 编写代码的比例
+
+**图表类型**：饼图 (PieChart)
+- AI 编写：xx%
+- 人工编写：xx%
+- 样式：chart.xkcd 的 Pie 图
+- 主题颜色：
+  - AI 编写：#4CAF50 (绿色)
+  - 人工编写：#de335e (粉红色)
+
+**数据来源**：
+- 从 URL 参数获取所有项目地址
+- 对每个项目发起 GET 请求到：`http://localhost:9970/api/ai-ratio?repo={repo_url}`
+- 汇总所有项目的 AI 代码比例
+
+**数据请求逻辑**：
+```typescript
+// 伪代码
+const projects = getProjectsFromURL(); // 从 URL 参数获取
+const aiRatioPromises = projects.map(proj => 
+  fetch(`http://localhost:9970/api/ai-ratio?repo=${proj}`)
+);
+const results = await Promise.all(aiRatioPromises);
+// 计算总的 AI 代码比例
+```
+
+---
+
+### 4.2 下半部分 - 贡献者滚动展示区（新增）
+
+#### 4.2.1 滚动展示组件 (CommitScroller)
+
+**功能**：
+- 展示所有 commit 过的人员及其 commit 次数
+- 滚动播放，循环展示
+- 像素风格的卡片设计
+
+**展示样式**：
+```
+┌──────────────────────────────────┐
+│  👤 Zhang San          245 commits │
+├──────────────────────────────────┤
+│  👤 Li Si              189 commits │
+├──────────────────────────────────┤
+│  👤 Wang Wu            156 commits │
+└──────────────────────────────────┘
+```
+
+**滚动效果**：
+- 使用 CSS animation 或 Vue transition 实现
+- 自动滚动，间隔 2-3 秒切换
+- 每次显示 5-8 个贡献者
+- 无缝循环
+
+**排序规则**：
+- 按 commit 数量降序排列
+- 支持切换排序方式（可选）
+
+**数据来源**：
+- 接口：`GET /api/dashboard/contributors`
+- 返回所有项目的贡献者列表
+
+---
+
+## 五、布局设计
+
+### 5.1 竖屏布局方案
+
+```
+┌─────────────────────────────────┐
+│         Header (顶部标题栏)        │  10vh
+├─────────────────┬───────────────┤
+│                 │               │
+│   总览图表区      │  AI 代码比例图  │  45vh
+│  (4个图表 2x2)   │  (大饼图)      │
+│                 │               │
+├─────────────────┴───────────────┤
+│                                 │
+│      贡献者滚动展示区              │  45vh
+│    (自动滚动的贡献者列表)          │
+│                                 │
+└─────────────────────────────────┘
+```
+
+### 5.2 响应式设计
+
+**屏幕适配策略**：
+```scss
+// 使用 vh 单位实现竖屏自适应
+.dashboard {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  
+  .top-section {
+    height: 55vh;
+    display: flex;
+    
+    .charts-grid {
+      flex: 3;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+    
+    .ai-ratio-panel {
+      flex: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+  }
+  
+  .bottom-section {
+    height: 45vh;
+    overflow: hidden;
+  }
+}
+
+// 小屏适配
+@media (max-height: 800px) {
+  .charts-grid {
+    gap: 10px !important;
+    padding: 10px !important;
+  }
+}
+```
+
+---
+
+## 六、数据流设计
+
+### 6.1 数据获取流程
+
+```
+启动看板
+    ↓
+解析 URL 参数 (获取项目列表)
+    ↓
+并行请求 ↓
+    ├─→ 请求 /api/dashboard/summary (汇总数据)
+    ├─→ 请求 /api/dashboard/contributors (贡献者)
+    └─→ 批量请求 http://localhost:9970/api/ai-ratio (AI 比例)
+    ↓
+数据处理 & 格式化
+    ↓
+渲染图表 & 启动滚动动画
+    ↓
+定时刷新 (可选，如 5 分钟刷新一次)
+```
+
+### 6.2 数据刷新策略
+
+**方案一：定时轮询**
+```typescript
+// 每 5 分钟刷新一次数据
+setInterval(() => {
+  fetchDashboardData();
+}, 5 * 60 * 1000);
+```
+
+**方案二：WebSocket 实时推送**（可选）
+- 如需实时更新，可改用 WebSocket
+- 服务端推送新的 commit 数据
+- 前端实时更新图表
+
+---
+
+## 七、样式设计规范
+
+### 7.1 主题色彩
+
+```scss
+// 继承原项目的像素风格配色
+$bg-primary: #212121;      // 主背景色
+$bg-secondary: #2a2a2a;    // 次背景色
+$text-primary: #ccc;       // 主文字色
+$text-secondary: #999;     // 次文字色
+$accent-color: #de335e;    // 强调色（粉红）
+$ai-color: #4CAF50;        // AI 代码色（绿色）
+$chart-stroke: #fff;       // 图表线条色
+```
+
+### 7.2 字体
+
+```scss
+@font-face {
+  font-family: 'vcr-osd';
+  src: url('https://fastly.jsdelivr.net/gh/hellodigua/cdn/fonts/vcr-osd.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pixel';
+  src: url('https://fastly.jsdelivr.net/gh/hellodigua/cdn/fonts/zpix.woff2') format('woff2');
+  font-display: swap;
+}
+
+body {
+  font-family: 'Pixel', sans-serif;
+  background-color: $bg-primary;
+  color: $text-primary;
+}
+
+h1, h2 {
+  font-family: 'vcr-osd', monospace;
+}
+```
+
+### 7.3 像素风格卡片
+
+```scss
+.pixel-card {
+  background-color: $bg-secondary;
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
+  border: 2px solid $text-secondary;
+  padding: 20px;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.3);
+  }
+}
+```
+
+---
+
+## 八、核心组件实现
+
+### 8.1 Dashboard.vue (主视图)
+
+```vue
+<template>
+  <div class="dashboard">
+    <!-- 顶部标题 -->
+    <header class="dashboard-header">
+      <h1>CODE996 DATA DASHBOARD</h1>
+      <div class="meta">
+        <span>Projects: {{ projectCount }}</span>
+        <span>Total Commits: {{ totalCommits }}</span>
+        <span class="time">{{ currentTime }}</span>
+      </div>
+    </header>
+    
+    <!-- 上半部分 -->
+    <section class="top-section">
+      <!-- 左侧：总览图表 -->
+      <div class="charts-grid">
+        <div class="chart-item">
+          <h2>按小时 commit 分布</h2>
+          <BarChart :data="hourData" />
+        </div>
+        <div class="chart-item">
+          <h2>工作/加班占比（按小时）</h2>
+          <PieChart :data="workHourRatio" />
+        </div>
+        <div class="chart-item">
+          <h2>按天 commit 分布</h2>
+          <BarChart :data="weekData" />
+        </div>
+        <div class="chart-item">
+          <h2>工作日/周末占比</h2>
+          <PieChart :data="workWeekRatio" />
+        </div>
+      </div>
+      
+      <!-- 右侧：AI 代码比例 -->
+      <div class="ai-ratio-panel">
+        <AICodeRatioChart :data="aiRatioData" :loading="aiRatioLoading" />
+      </div>
+    </section>
+    
+    <!-- 下半部分 -->
+    <section class="bottom-section">
+      <CommitScroller :contributors="contributors" />
+    </section>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import { fetchDashboardData, fetchAIRatio } from '@/api/dashboard';
+// ... 其他导入
+
+// 响应式数据
+const projectCount = ref(0);
+const totalCommits = ref(0);
+const currentTime = ref('');
+const hourData = ref([]);
+const weekData = ref([]);
+const workHourRatio = ref([]);
+const workWeekRatio = ref([]);
+const aiRatioData = ref([]);
+const aiRatioLoading = ref(true);
+const contributors = ref([]);
+
+// 更新时间
+const updateTime = () => {
+  currentTime.value = new Date().toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
+
+// 初始化数据
+const initDashboard = async () => {
+  try {
+    // 从 URL 获取项目列表
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectsParam = urlParams.get('projects');
+    const projects = projectsParam ? projectsParam.split(',') : [];
+    
+    // 并行请求数据
+    const [summaryData, contributorsData] = await Promise.all([
+      fetchDashboardData(projects),
+      fetchContributors(projects)
+    ]);
+    
+    // 更新总览数据
+    projectCount.value = summaryData.repo_count;
+    totalCommits.value = summaryData.total_count;
+    hourData.value = summaryData.hour_data;
+    weekData.value = summaryData.week_data;
+    workHourRatio.value = summaryData.work_hour_pl;
+    workWeekRatio.value = summaryData.work_week_pl;
+    
+    // 更新贡献者数据
+    contributors.value = contributorsData;
+    
+    // 请求 AI 代码比例
+    fetchAIRatioData(projects);
+    
+  } catch (error) {
+    console.error('初始化失败:', error);
+  }
+};
+
+// 请求 AI 代码比例
+const fetchAIRatioData = async (projects: string[]) => {
+  try {
+    aiRatioLoading.value = true;
+    const ratioData = await fetchAIRatio(projects);
+    aiRatioData.value = ratioData;
+  } catch (error) {
+    console.error('获取 AI 比例失败:', error);
+  } finally {
+    aiRatioLoading.value = false;
+  }
+};
+
+// 定时刷新
+let refreshTimer: number;
+
+onMounted(() => {
+  initDashboard();
+  updateTime();
+  
+  // 每秒更新时间
+  setInterval(updateTime, 1000);
+  
+  // 每 5 分钟刷新数据
+  refreshTimer = setInterval(initDashboard, 5 * 60 * 1000);
+});
+
+onUnmounted(() => {
+  clearInterval(refreshTimer);
+});
+</script>
+
+<style lang="scss" scoped>
+@import '@/styles/dashboard.scss';
+</style>
+```
+
+### 8.2 AICodeRatioChart.vue (AI 代码比例图表)
+
+```vue
+<template>
+  <div class="ai-ratio-chart">
+    <h2>AI 编写代码比例</h2>
+    <div class="chart-wrapper" v-if="!loading">
+      <PieChart :data="chartData" :options="chartOptions" />
+      <div class="stats">
+        <div class="stat-item ai">
+          <span class="label">AI 编写</span>
+          <span class="value">{{ aiPercentage }}%</span>
+        </div>
+        <div class="stat-item human">
+          <span class="label">人工编写</span>
+          <span class="value">{{ humanPercentage }}%</span>
+        </div>
+      </div>
+    </div>
+    <div class="loading" v-else>
+      <div class="pixel-spinner"></div>
+      <p>加载中...</p>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import PieChart from './charts/PieChart.vue';
+
+const props = defineProps<{
+  data: { ai_lines: number; human_lines: number };
+  loading: boolean;
+}>();
+
+const aiPercentage = computed(() => {
+  const total = props.data.ai_lines + props.data.human_lines;
+  return total > 0 ? ((props.data.ai_lines / total) * 100).toFixed(1) : 0;
+});
+
+const humanPercentage = computed(() => {
+  const total = props.data.ai_lines + props.data.human_lines;
+  return total > 0 ? ((props.data.human_lines / total) * 100).toFixed(1) : 0;
+});
+
+const chartData = computed(() => [
+  { time: 'AI编写', count: props.data.ai_lines },
+  { time: '人工编写', count: props.data.human_lines }
+]);
+
+const chartOptions = {
+  backgroundColor: '#212121',
+  strokeColor: '#fff',
+};
+</script>
+
+<style lang="scss" scoped>
+.ai-ratio-chart {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #2a2a2a;
+  padding: 20px;
+  box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.1);
+  
+  h2 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #fff;
+  }
+  
+  .chart-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .stats {
+    display: flex;
+    gap: 40px;
+    margin-top: 30px;
+    
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      
+      .label {
+        font-size: 1em;
+        color: #999;
+        margin-bottom: 10px;
+      }
+      
+      .value {
+        font-size: 2em;
+        font-family: 'vcr-osd', monospace;
+        font-weight: bold;
+      }
+      
+      &.ai .value {
+        color: #4CAF50;
+      }
+      
+      &.human .value {
+        color: #de335e;
+      }
+    }
+  }
+  
+  .loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    
+    p {
+      margin-top: 20px;
+      color: #999;
+    }
+  }
+}
+
+// 像素风格加载动画
+.pixel-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #555;
+  border-top-color: #de335e;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+```
+
+### 8.3 CommitScroller.vue (贡献者滚动组件)
+
+```vue
+<template>
+  <div class="commit-scroller">
+    <h2>🏆 Top Contributors</h2>
+    <div class="scroller-container">
+      <transition-group name="slide" tag="div" class="contributor-list">
+        <div 
+          v-for="contributor in visibleContributors" 
+          :key="contributor.email"
+          class="contributor-card"
+        >
+          <div class="rank">{{ contributor.rank }}</div>
+          <div class="avatar">👤</div>
+          <div class="info">
+            <div class="name">{{ contributor.name }}</div>
+            <div class="email">{{ contributor.email }}</div>
+          </div>
+          <div class="commits">
+            <span class="count">{{ contributor.commits }}</span>
+            <span class="label">commits</span>
+          </div>
+        </div>
+      </transition-group>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+
+interface Contributor {
+  name: string;
+  email: string;
+  commits: number;
+  rank: number;
+}
+
+const props = defineProps<{
+  contributors: Contributor[];
+}>();
+
+const currentIndex = ref(0);
+const pageSize = 6; // 每页显示 6 个
+
+// 当前可见的贡献者
+const visibleContributors = computed(() => {
+  const start = currentIndex.value;
+  const end = start + pageSize;
+  return props.contributors.slice(start, end);
+});
+
+// 自动滚动
+let scrollTimer: number;
+
+const autoScroll = () => {
+  currentIndex.value += 1;
+  
+  // 循环滚动
+  if (currentIndex.value >= props.contributors.length) {
+    currentIndex.value = 0;
+  }
+};
+
+onMounted(() => {
+  // 每 3 秒滚动一次
+  scrollTimer = setInterval(autoScroll, 3000);
+});
+
+onUnmounted(() => {
+  clearInterval(scrollTimer);
+});
+</script>
+
+<style lang="scss" scoped>
+.commit-scroller {
+  width: 100%;
+  height: 100%;
+  background-color: #212121;
+  padding: 30px;
+  overflow: hidden;
+  
+  h2 {
+    font-size: 2em;
+    text-align: center;
+    margin-bottom: 30px;
+    color: #de335e;
+    text-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+  }
+  
+  .scroller-container {
+    height: calc(100% - 100px);
+    overflow: hidden;
+  }
+  
+  .contributor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .contributor-card {
+    display: flex;
+    align-items: center;
+    background-color: #2a2a2a;
+    padding: 20px 30px;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
+    border: 2px solid #444;
+    transition: all 0.3s;
+    
+    &:hover {
+      transform: translateX(10px);
+      border-color: #de335e;
+    }
+    
+    .rank {
+      font-size: 2em;
+      font-family: 'vcr-osd', monospace;
+      color: #de335e;
+      min-width: 60px;
+      text-align: center;
+    }
+    
+    .avatar {
+      font-size: 3em;
+      margin: 0 30px;
+    }
+    
+    .info {
+      flex: 1;
+      
+      .name {
+        font-size: 1.5em;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      
+      .email {
+        font-size: 0.9em;
+        color: #999;
+      }
+    }
+    
+    .commits {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: 30px;
+      
+      .count {
+        font-size: 2.5em;
+        font-family: 'vcr-osd', monospace;
+        color: #4CAF50;
+        font-weight: bold;
+      }
+      
+      .label {
+        font-size: 0.9em;
+        color: #999;
+        margin-top: 5px;
+      }
+    }
+  }
+}
+
+// 滑动动画
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.5s ease;
+}
+
+.slide-enter-from {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.slide-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+</style>
+```
+
+---
+
+## 九、API 封装
+
+### 9.1 api/dashboard.ts
+
+```typescript
+import axios from 'axios';
+import type { DashboardSummary, Contributor, AIRatioData } from './types';
+
+const API_BASE = '/api/dashboard';
+const AI_SERVICE_BASE = 'http://localhost:9970';
+
+/**
+ * 获取仪表板汇总数据
+ */
+export async function fetchDashboardData(projects: string[]): Promise<DashboardSummary> {
+  const response = await axios.get(`${API_BASE}/summary`, {
+    params: { projects: projects.join(',') }
+  });
+  return response.data;
+}
+
+/**
+ * 获取贡献者列表
+ */
+export async function fetchContributors(projects: string[]): Promise<Contributor[]> {
+  const response = await axios.get(`${API_BASE}/contributors`, {
+    params: { projects: projects.join(',') }
+  });
+  return response.data;
+}
+
+/**
+ * 获取 AI 代码比例（批量）
+ */
+export async function fetchAIRatio(projects: string[]): Promise<AIRatioData> {
+  try {
+    // 并行请求所有项目的 AI 比例
+    const promises = projects.map(repo =>
+      axios.get(`${AI_SERVICE_BASE}/api/ai-ratio`, {
+        params: { repo },
+        timeout: 10000 // 10 秒超时
+      })
+    );
+    
+    const results = await Promise.all(promises);
+    
+    // 汇总所有项目的数据
+    const totalAiLines = results.reduce((sum, res) => sum + (res.data.ai_lines || 0), 0);
+    const totalHumanLines = results.reduce((sum, res) => sum + (res.data.human_lines || 0), 0);
+    
+    return {
+      ai_lines: totalAiLines,
+      human_lines: totalHumanLines,
+      projects: results.length
+    };
+  } catch (error) {
+    console.error('获取 AI 比例失败:', error);
+    // 返回默认数据
+    return { ai_lines: 0, human_lines: 0, projects: 0 };
+  }
+}
+```
+
+### 9.2 api/types.ts
+
+```typescript
+/**
+ * 仪表板汇总数据
+ */
+export interface DashboardSummary {
+  start_date: string;
+  end_date: string;
+  total_count: number;
+  repo_count: number;
+  hour_data: TimeCount[];
+  week_data: TimeCount[];
+  work_hour_pl: TimeCount[];
+  work_week_pl: TimeCount[];
+  index_996: number;
+  overtime_ratio: number;
+  is_standard: boolean;
+}
+
+export interface TimeCount {
+  time: string;
+  count: number;
+}
+
+/**
+ * 贡献者数据
+ */
+export interface Contributor {
+  rank: number;
+  name: string;
+  email: string;
+  commits: number;
+  additions?: number;
+  deletions?: number;
+}
+
+/**
+ * AI 代码比例数据
+ */
+export interface AIRatioData {
+  ai_lines: number;
+  human_lines: number;
+  projects: number;
+}
+```
+
+---
+
+## 十、部署方案
+
+### 10.1 开发环境
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 访问地址
+# http://localhost:3800/?projects=repo1,repo2,repo3
+```
+
+### 10.2 生产环境
+```bash
+# 构建项目
+npm run build
+
+# 部署 dist 目录到静态服务器
+# 如：Nginx、Apache、Caddy 等
+```
+
+### 10.3 URL 参数说明
+```
+http://your-dashboard.com/?projects=project1,project2,project3
+```
+- `projects`: 逗号分隔的项目标识列表
+
+---
+
+## 十一、开发优先级
+
+### Phase 1: 基础框架 (1-2天)
+1. ✅ 搭建 Vite + Vue 3 + TypeScript 项目
+2. ✅ 复用原项目的样式和字体
+3. ✅ 实现基础布局（上下两部分）
+
+### Phase 2: 数据可视化 (2-3天)
+4. ✅ 复用 BarChart 和 PieChart 组件
+5. ✅ 实现总览图表展示
+6. ✅ 实现 AI 代码比例图表
+7. ✅ 对接后端 API
+
+### Phase 3: 滚动展示 (1-2天)
+8. ✅ 实现贡献者滚动组件
+9. ✅ 实现滚动动画效果
+
+### Phase 4: 优化完善 (1天)
+10. ✅ 响应式适配
+11. ✅ 加载状态优化
+12. ✅ 错误处理
+
+**预计总开发时间: 5-8 个工作日**
+
+---
+
+## 十二、注意事项
+
+1. **性能优化**
+   - 图表使用 chart.xkcd 可能性能有限，大数据集需优化
+   - 考虑使用 `requestAnimationFrame` 优化滚动动画
+   - 避免频繁的 DOM 操作
+
+2. **错误处理**
+   - AI 接口可能超时或失败，需要降级处理
+   - 显示友好的错误提示
+   - 提供重试机制
+
+3. **浏览器兼容性**
+   - 主要支持现代浏览器（Chrome, Edge, Firefox）
+   - 需要支持 CSS Grid 和 Flexbox
+   - 字体加载失败时的降级方案
+
+4. **数据刷新**
+   - 避免过于频繁的请求
+   - 实现请求去重和防抖
+   - 考虑使用缓存策略
+
+5. **大屏展示**
+   - 针对大屏优化字体大小
+   - 考虑使用 4K 或超宽屏幕的适配
+   - 测试不同分辨率下的显示效果
+
+---
+
+## 十三、未来扩展
+
+1. **实时数据推送**: WebSocket 支持
+2. **多语言支持**: i18n 国际化
+3. **主题切换**: 支持浅色/深色主题
+4. **数据导出**: 导出报表功能
+5. **告警功能**: 异常数据告警
+6. **数据筛选**: 时间范围、项目筛选
+
+---
+
+**文档版本**: v1.0
+**最后更新**: 2025-10-31
+**作者**: AI Assistant
+

@@ -11,6 +11,8 @@
 - **AI 代码占比分析**：调用外部 LLM 服务估算项目内 AI 生成代码占比，并做可视化展示。
 - **Redis/内存双模缓存**：默认使用 Redis，缺省时自动降级为内存缓存不停机。
 - **贡献度排行升级**：基于代码变更行数衡量个人贡献，兼顾新增、删除与平均单次影响。
+- **柱状图满幅渲染**：通过自定义 `chart.xkcd` 补丁与 `chartMargins` 配置，让 x/y 轴在卡片内自动撑满，更适合大屏展示。
+- **贡献者慢速匀速滚动**：底部榜单采用 `requestAnimationFrame` 驱动的丝滑循环滚动，长列表也能持续播放无明显跳帧。
 
 ---
 
@@ -86,6 +88,11 @@ http://localhost:3801/?projects=<项目标识1>,<项目标识2>
 ### 默认项目
 
 脚本会调用 `scripts/get_default_projects.py` 读取默认项目列表，亦可通过 `?projects=` URL 参数传入任意逗号分隔的仓库地址或本地目录别名。
+
+### 图表与滚动细节
+
+- **柱状图边距**：在 `src/components/charts/BarChart.vue` 中通过 `chartOptions.chartMargins` 调整四周留白；底层逻辑由 `src/utils/chartXkcd.ts` 自动套用到 `chart.xkcd`，无需改动第三方库。
+- **贡献者滚动速度**：`CommitScroller` 使用常量 `SCROLL_SPEED_PX_PER_SEC`（默认 12）控制滚动速度；若用于更大屏幕，可在组件内调整该数值。
 
 ---
 
