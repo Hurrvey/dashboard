@@ -1,12 +1,13 @@
-<template>
-  <div class="chart-container" ref="containerRef">
-    <svg class="chart" ref="chartRef"></svg>
+﻿<template>
+  <div class='chart-container' ref='containerRef'>
+    <svg class='chart' ref='chartRef'></svg>
   </div>
 </template>
-<script setup lang="ts">
+
+<script setup lang='ts'>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch, defineProps, defineExpose } from 'vue'
-import chartXkcd from 'chart.xkcd'
-import { ChartData } from '../../typings'
+import chartXkcd from '../../utils/chartXkcd'
+import type { ChartData } from '../../typings'
 
 const props = defineProps({
   data: {
@@ -18,143 +19,143 @@ const props = defineProps({
     required: true,
   },
   options: {
-    type: Object,
+    type: Object as () => Record<string, any>,
     default: () => ({
       backgroundColor: '#212121',
       strokeColor: '#fff',
+      unxkcdify: false,
     }),
   },
 })
 
 const containerRef = ref<HTMLDivElement | null>(null)
-const chartRef = ref<SVGElement | null>(null)
+const chartRef = ref<SVGSVGElement | null>(null)
 let chartInstance: any = null
 let resizeObserver: ResizeObserver | null = null
-let pendingInit: number | null = null
+let pendingRender: number | null = null
 
-function init() {
-  if (!chartRef.value || !containerRef.value) return
-  
-  // 获取容器的实际尺寸
-  const containerWidth = containerRef.value.clientWidth
-  const containerHeight = containerRef.value.clientHeight
-  
-  if (containerWidth === 0 || containerHeight === 0) {
-    if (pendingInit !== null) {
-      clearTimeout(pendingInit)
+function clearChart() {
+  if (!chartRef.value) return
+  while (chartRef.value.firstChild) {
+    chartRef.value.removeChild(chartRef.value.firstChild)
+  }
+}
+
+function renderChart() {
+  const svg = chartRef.value
+  const container = containerRef.value
+
+  if (!svg || !container) return
+
+  const width = container.clientWidth
+  const height = container.clientHeight
+
+  if (!width || !height) {
+    if (pendingRender !== null) {
+      window.clearTimeout(pendingRender)
     }
-    pendingInit = window.setTimeout(() => {
-      pendingInit = null
-      init()
-    }, 200)
+    pendingRender = window.setTimeout(() => {
+      pendingRender = null
+      renderChart()
+    }, 160)
     return
   }
 
-  // 完全清除旧图表（包括所有子元素）
-  if (chartRef.value) {
-    while (chartRef.value.firstChild) {
-      chartRef.value.removeChild(chartRef.value.firstChild)
-    }
-    chartRef.value.classList.add('chart')
-  }
+  clearChart()
   chartInstance = null
 
-  const ChartConstructor = chartXkcd[props.chartType]
+  const ChartConstructor = (chartXkcd as any)[props.chartType]
   if (!ChartConstructor) {
-    console.error(`图表类型 ${props.chartType} 不存在`)
+    console.error('图表类型 ' + props.chartType + ' 不存在')
     return
   }
 
-  // 计算合适的图表尺寸
-  let chartWidth, chartHeight
-  
-  if (props.chartType === 'Pie') {
-    // 饼图：强制正方形，确保圆形
-    const size = Math.min(containerWidth, containerHeight)
-    chartWidth = Math.max(size * 0.9, 200)  // 使用90%的容器尺寸
-    chartHeight = chartWidth  // ⭐ 关键：宽高必须相等
-  } else {
-    // 柱状图：适应容器
-    chartWidth = Math.max(containerWidth * 0.95, 200)
-    chartHeight = Math.max(containerHeight * 0.95, 150)
-  }
+  const chartWidth = Math.max(width, 1)
+  const chartHeight = Math.max(height, 1)
 
-  // 设置 SVG 的固定尺寸（不使用 viewBox，避免缩放问题）
-  chartRef.value.setAttribute('width', String(Math.floor(chartWidth)))
-  chartRef.value.setAttribute('height', String(Math.floor(chartHeight)))
-  
-  // 使用 CSS 居中 SVG
-  chartRef.value.style.display = 'block'
-  chartRef.value.style.margin = '0 auto'
+  svg.setAttribute('width', String(chartWidth))
+  svg.setAttribute('height', String(chartHeight))
+  svg.setAttribute('viewBox', `0 0 ${chartWidth} ${chartHeight}`)
+  svg.style.width = '100%'
+  svg.style.height = '100%'
+  svg.style.display = 'block'
+  svg.style.margin = '0'
+  svg.style.background = (props.options as any)?.backgroundColor ?? 'transparent'
+  svg.style.overflow = 'hidden'
 
-  try {
-    chartInstance = new ChartConstructor(chartRef.value, {
-      data: {
-        labels: props.data.map((item: ChartData) => item.time),
-        datasets: [
-          {
-            data: props.data.map((item: ChartData) => item.count),
-          },
-        ],
-      },
-      options: {
-        ...props.options,
-        width: chartWidth,
-        height: chartHeight,
-        xLabel: props.chartType === 'Bar' ? '' : undefined,
-        yLabel: props.chartType === 'Bar' ? '' : undefined,
-      },
-    })
-    
-    console.log(`图表初始化成功 [${props.chartType}]:`, Math.floor(chartWidth), 'x', Math.floor(chartHeight))
-  } catch (error) {
-    console.error('图表初始化失败:', error)
+  chartInstance = new ChartConstructor(svg, {
+    data: {
+      labels: props.data.map(item => item.time),
+      datasets: [
+        {
+          data: props.data.map(item => item.count),
+        },
+      ],
+    },
+    options: {
+      width: chartWidth,
+      height: chartHeight,
+      ...(props.options || {}),
+    },
+  })
+}
+
+function debounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
+  let timer: number | null = null
+  return (...args: Parameters<T>) => {
+    if (timer !== null) {
+      window.clearTimeout(timer)
+    }
+    timer = window.setTimeout(() => {
+      timer = null
+      fn(...args)
+    }, delay)
   }
 }
 
-// 监听数据变化
-watch(() => props.data, () => {
-  if (props.data && props.data.length > 0) {
+const debouncedRender = debounce(renderChart, 160)
+
+watch(
+  () => props.data,
+  () => {
     nextTick(() => {
-      init()
+      debouncedRender()
+    })
+  },
+  { deep: true }
+)
+
+watch(
+  () => props.chartType,
+  () => {
+    nextTick(() => {
+      debouncedRender()
     })
   }
-}, { deep: true })
+)
 
-// 防抖函数
-function debounce(func: Function, wait: number) {
-  let timeout: number | null = null
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      timeout = null
-      func(...args)
-    }
-    if (timeout !== null) {
-      clearTimeout(timeout)
-    }
-    timeout = window.setTimeout(later, wait)
-  }
-}
-
-const debouncedInit = debounce(init, 300)
+watch(
+  () => props.options,
+  () => {
+    nextTick(() => {
+      debouncedRender()
+    })
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   nextTick(() => {
-    // 延迟初始化，确保容器已经渲染
-    setTimeout(() => {
-      init()
-    }, 100)
-    
-    // 监听容器大小变化
+    renderChart()
+
     if (containerRef.value && typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => {
-        debouncedInit()
+        debouncedRender()
       })
       resizeObserver.observe(containerRef.value)
     }
-    
-    // 监听窗口大小变化（备用方案）
-    window.addEventListener('resize', debouncedInit)
+
+    window.addEventListener('resize', debouncedRender)
   })
 })
 
@@ -163,24 +164,28 @@ onBeforeUnmount(() => {
     resizeObserver.unobserve(containerRef.value)
     resizeObserver.disconnect()
   }
-  window.removeEventListener('resize', debouncedInit)
-  if (pendingInit !== null) {
-    clearTimeout(pendingInit)
+  window.removeEventListener('resize', debouncedRender)
+  if (pendingRender !== null) {
+    window.clearTimeout(pendingRender)
   }
 })
 
 defineExpose({
-  chartInstance,
-  refresh: init,
+  get chartInstance() {
+    return chartInstance
+  },
+  refresh: renderChart,
 })
 </script>
-<style lang="scss" scoped>
+
+<style lang='scss' scoped>
 .chart-container {
   width: 100%;
   height: 100%;
   position: relative;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .chart {
@@ -189,4 +194,3 @@ defineExpose({
   display: block;
 }
 </style>
-

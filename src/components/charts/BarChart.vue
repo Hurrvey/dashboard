@@ -13,9 +13,15 @@ const props = defineProps({
 })
 
 const chartOptions = {
-  backgroundColor: '#212121',
+  backgroundColor: 'transparent',
   strokeColor: '#fff',
   unxkcdify: false,
+  chartMargins: {
+    top: 12,
+    right: 12,
+    bottom: 24,
+    left: 32,
+  },
 }
 </script>
 

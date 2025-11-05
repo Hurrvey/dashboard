@@ -13,7 +13,7 @@
   }
 
   .dashboard-header {
-    height: 10vh;
+    height: 12vh;
     background-color: #2a2a2a;
     display: flex;
     flex-direction: column;
@@ -24,7 +24,7 @@
     
     h1 {
       font-family: 'vcr-osd', monospace;
-      font-size: 2em;
+      font-size: clamp(2.2rem, 2.8vh, 2.8rem);
       color: #de335e;
       text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
       margin-bottom: 10px;
@@ -32,8 +32,8 @@
     
     .meta {
       display: flex;
-      gap: 30px;
-      font-size: 1em;
+      gap: clamp(24px, 3.2vh, 36px);
+      font-size: clamp(1rem, 1.6vh, 1.2rem);
       color: #999;
       
       span {
@@ -46,60 +46,161 @@
   }
   
   .top-section {
-    height: 45vh;
-    display: flex;
-    
+    height: 60vh;
+    padding: clamp(18px, 2.5vh, 32px);
+
     .charts-grid {
-      flex: 3;
+      height: 100%;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
-      gap: 20px;
-      padding: 20px;
-      
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: 1.5fr 1fr 1fr;
+      gap: clamp(18px, 2.4vh, 32px);
+
       .chart-item {
         background-color: #2a2a2a;
-        padding: 15px;
+        padding: clamp(16px, 2.2vh, 26px);
         box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
         display: flex;
         flex-direction: column;
         min-height: 0;
         min-width: 0;
-        overflow: hidden;
-        
-        h2 {
-          font-size: 1.2em;
+        overflow: visible;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        height: 100%;
+
+        .chart-title {
+          font-size: clamp(1.3rem, 2.1vh, 1.7rem);
           color: #fff;
-          margin-bottom: 15px;
-          text-align: center;
+          margin-bottom: clamp(12px, 1.6vh, 18px);
+          text-align: left;
           font-family: 'Pixel', sans-serif;
           flex-shrink: 0;
         }
-        
-        .chart-wrapper {
+
+        .chart-body {
           flex: 1;
+          min-height: 0;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: clamp(12px, 1.6vh, 16px);
+        }
+
+        .chart-body--bar {
+          flex: 1;
+          min-height: 0;
+          align-items: stretch;
+          box-sizing: border-box;
+          padding: clamp(14px, 1.6vh, 22px) clamp(10px, 1.2vw, 18px);
+
+          > * {
+            flex: 1 1 auto;
+            width: 100%;
+            height: 100%;
+            min-width: 0;
+            min-height: 0;
+            overflow: visible;
+          }
+        }
+
+        .chart-body--pie {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          gap: clamp(16px, 2vh, 28px);
+          padding: clamp(10px, 1.4vh, 18px);
+        }
+
+        .chart-graphic {
+          flex: 0 0 clamp(420px, 72%, 640px);
           display: flex;
           align-items: center;
           justify-content: center;
           min-height: 0;
-          min-width: 0;
-          position: relative;
+
+          > * {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            overflow: visible;
+          }
+        }
+
+        .chart-description {
+          flex: 0 1 clamp(200px, 28%, 260px);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: clamp(14px, 2vh, 20px);
+          color: #ddd;
+          font-size: clamp(1.1rem, 2vh, 1.3rem);
+          line-height: 1.7;
+          text-align: right;
+          align-items: flex-end;
+
+          p {
+            margin: 0;
+            width: 100%;
+            overflow-wrap: anywhere;
+          }
+
+          strong {
+            font-family: 'Pixel', sans-serif;
+          }
+
+          strong:first-of-type {
+            color: #4CAF50;
+          }
+
+          strong:last-of-type {
+            color: #de335e;
+          }
         }
       }
-    }
-    
-    .ai-ratio-panel {
-      flex: 2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+
+      .chart-item--full {
+        grid-column: 1 / -1;
+        grid-row: 1 / 2;
+      }
+
+      .chart-item--square {
+        min-height: 0;
+      }
+
+      .chart-item--work-hour {
+        grid-column: 1 / 2;
+        grid-row: 2 / 3;
+      }
+
+      .chart-item--week {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+      }
+
+      .chart-item--work-week {
+        grid-column: 1 / 2;
+        grid-row: 3 / 4;
+      }
+
+      .chart-item--ai {
+        grid-column: 2 / 3;
+        grid-row: 3 / 4;
+      }
+
+      .chart-item--work-hour .chart-description strong:nth-of-type(2),
+      .chart-item--work-week .chart-description strong:nth-of-type(2),
+      .chart-item--ai .chart-description strong:nth-of-type(2) {
+        color: #de335e;
+      }
     }
   }
-  
+
   .bottom-section {
-    height: 45vh;
+    height: 28vh;
     overflow: hidden;
+    padding: clamp(18px, 2.4vh, 28px);
   }
 
   .dashboard-overlay {
@@ -116,13 +217,13 @@
     background: rgba(20, 20, 20, 0.92);
 
     .primary {
-      font-size: 1.4em;
+      font-size: clamp(1.2rem, 2.4vh, 1.4rem);
       color: #fff;
       font-family: 'Pixel', sans-serif;
     }
 
     .secondary {
-      font-size: 1em;
+      font-size: clamp(0.9rem, 1.6vh, 1.1rem);
       color: #bbb;
       max-width: 520px;
       line-height: 1.6;
@@ -134,7 +235,7 @@
       background: #de335e;
       border: none;
       color: #fff;
-      font-size: 1em;
+      font-size: clamp(0.95rem, 1.7vh, 1.1rem);
       font-family: 'Pixel', sans-serif;
       cursor: pointer;
       border-radius: 4px;
@@ -187,7 +288,7 @@
       .chart-item {
         padding: 10px;
         
-        h2 {
+        .chart-title {
           font-size: 1em;
           margin-bottom: 10px;
         }
@@ -224,7 +325,7 @@
       font-size: 3em;
     }
     
-    .top-section .charts-grid .chart-item h2 {
+    .top-section .charts-grid .chart-item .chart-title {
       font-size: 1.5em;
     }
   }

@@ -26,37 +26,73 @@
     
     <!-- 上半部分 -->
     <section class="top-section">
-      <!-- 左侧：总览图表 -->
       <div class="charts-grid">
-        <div class="chart-item">
-          <h2>按小时 commit 分布</h2>
-          <div class="chart-wrapper">
+        <div class="chart-item chart-item--full chart-item--hourly">
+          <div class="chart-title">按小时 commit 分布</div>
+          <div class="chart-body chart-body--bar">
             <BarChart :data="hourData" />
           </div>
         </div>
-        <div class="chart-item">
-          <h2>工作/加班占比（按小时）</h2>
-          <div class="chart-wrapper">
-            <PieChart :data="workHourRatio" />
+
+        <div class="chart-item chart-item--square chart-item--work-hour">
+          <div class="chart-title">工作/加班占比（按小时）</div>
+          <div class="chart-body chart-body--pie">
+            <div class="chart-graphic">
+              <PieChart :data="workHourChartData" />
+            </div>
+            <div class="chart-description">
+              <template v-if="workHourSummary.total > 0">
+                <p><strong>工作时间：</strong>{{ workHourSummary.work }} 次 ({{ workHourSummary.workPercent }}%)</p>
+                <p><strong>加班时间：</strong>{{ workHourSummary.overtime }} 次 ({{ workHourSummary.overtimePercent }}%)</p>
+              </template>
+              <p v-else>暂无数据</p>
+            </div>
           </div>
         </div>
-        <div class="chart-item">
-          <h2>按天 commit 分布</h2>
-          <div class="chart-wrapper">
+
+        <div class="chart-item chart-item--square chart-item--week">
+          <div class="chart-title">按天 commit 分布</div>
+          <div class="chart-body chart-body--bar">
             <BarChart :data="weekData" />
           </div>
         </div>
-        <div class="chart-item">
-          <h2>工作日/周末占比</h2>
-          <div class="chart-wrapper">
-            <PieChart :data="workWeekRatio" />
+
+        <div class="chart-item chart-item--square chart-item--work-week">
+          <div class="chart-title">工作日/周末占比</div>
+          <div class="chart-body chart-body--pie">
+            <div class="chart-graphic">
+              <PieChart :data="workWeekChartData" />
+            </div>
+            <div class="chart-description">
+              <template v-if="workWeekSummary.total > 0">
+                <p><strong>工作日：</strong>{{ workWeekSummary.weekday }} 次 ({{ workWeekSummary.weekdayPercent }}%)</p>
+                <p><strong>周末：</strong>{{ workWeekSummary.weekend }} 次 ({{ workWeekSummary.weekendPercent }}%)</p>
+              </template>
+              <p v-else>暂无数据</p>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <!-- 右侧：AI 代码比例 -->
-      <div class="ai-ratio-panel">
-        <AICodeRatioChart :data="aiRatioData" :loading="aiRatioLoading" />
+
+        <div class="chart-item chart-item--square chart-item--ai">
+          <div class="chart-title">AI 编写代码比例</div>
+          <div class="chart-body chart-body--pie">
+            <div class="chart-graphic">
+              <PieChart :data="aiRatioChart" />
+            </div>
+            <div class="chart-description">
+              <template v-if="aiRatioSummary.total > 0">
+                <p><strong>AI 编写：</strong>{{ aiRatioSummary.ai }} 行 ({{ aiRatioSummary.aiPercent }}%)</p>
+                <p><strong>人工编写：</strong>{{ aiRatioSummary.human }} 行 ({{ aiRatioSummary.humanPercent }}%)</p>
+              </template>
+              <template v-else-if="aiRatioLoading">
+                <p>数据加载中...</p>
+              </template>
+              <template v-else>
+                <p>暂无数据</p>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
     
@@ -69,12 +105,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { fetchDashboardData, fetchContributors, fetchAIRatio } from '../api/dashboard'
 import { getCurrentTimeString } from '../utils/time'
 import BarChart from '../components/charts/BarChart.vue'
 import PieChart from '../components/charts/PieChart.vue'
-import AICodeRatioChart from '../components/AICodeRatioChart.vue'
 import CommitScroller from '../components/CommitScroller.vue'
 import type { ChartData, Contributor, AIRatioData } from '../typings'
 
@@ -145,7 +180,10 @@ const initDashboard = async (options: InitOptions = {}) => {
     // 更新总览数据
     projectCount.value = summaryData.repo_count
     totalCommits.value = summaryData.total_count
-    hourData.value = summaryData.hour_data
+    hourData.value = summaryData.hour_data.map((item, index) => ({
+      ...item,
+      time: index % 2 === 0 ? item.time : ' '
+    }))
     weekData.value = summaryData.week_data
     workHourRatio.value = summaryData.work_hour_pl
     workWeekRatio.value = summaryData.work_week_pl
@@ -200,30 +238,122 @@ const retryLoad = () => {
   initDashboard({ forceRefresh: true })
 }
 
+const workHourSummary = computed(() => {
+  const workItem = workHourRatio.value.find(item => item.time.includes('工作'))
+  const overtimeItem = workHourRatio.value.find(item => item.time.includes('加班'))
+  const work = workItem?.count ?? 0
+  const overtime = overtimeItem?.count ?? 0
+  const total = work + overtime
+  const percent = (count: number) => (total > 0 ? ((count / total) * 100).toFixed(1) : '0.0')
+  return {
+    total,
+    work,
+    overtime,
+    workPercent: percent(work),
+    overtimePercent: percent(overtime),
+  }
+})
+
+const workHourChartData = computed<ChartData[]>(() => {
+  if (workHourSummary.value.total === 0) {
+    return [
+      { time: '工作时间', count: 1 },
+      { time: '加班时间', count: 1 },
+    ]
+  }
+  return workHourRatio.value
+})
+
+const workWeekSummary = computed(() => {
+  const weekdayItem = workWeekRatio.value.find(item => item.time.includes('工作'))
+  const weekendItem = workWeekRatio.value.find(item => item.time.includes('周末'))
+  const weekday = weekdayItem?.count ?? 0
+  const weekend = weekendItem?.count ?? 0
+  const total = weekday + weekend
+  const percent = (count: number) => (total > 0 ? ((count / total) * 100).toFixed(1) : '0.0')
+  return {
+    total,
+    weekday,
+    weekend,
+    weekdayPercent: percent(weekday),
+    weekendPercent: percent(weekend),
+  }
+})
+
+const workWeekChartData = computed<ChartData[]>(() => {
+  if (workWeekSummary.value.total === 0) {
+    return [
+      { time: '工作日', count: 1 },
+      { time: '周末', count: 1 },
+    ]
+  }
+  return workWeekRatio.value
+})
+
+const aiRatioSummary = computed(() => {
+  const ai = aiRatioData.value?.ai_lines ?? 0
+  const human = aiRatioData.value?.human_lines ?? 0
+  const total = ai + human
+  return {
+    total,
+    ai,
+    human,
+    aiPercent: total > 0 ? ((ai / total) * 100).toFixed(1) : '0.0',
+    humanPercent: total > 0 ? ((human / total) * 100).toFixed(1) : '0.0',
+  }
+})
+
+const aiRatioChart = computed<ChartData[]>(() => {
+  if (aiRatioSummary.value.total === 0) {
+    return [
+      { time: 'AI编写', count: 1 },
+      { time: '人工编写', count: 1 },
+    ]
+  }
+  return [
+    { time: 'AI编写', count: aiRatioSummary.value.ai },
+    { time: '人工编写', count: aiRatioSummary.value.human },
+  ]
+})
+
 // 定时器
 let timeTimer: number
-let refreshTimer: number
-let hardRefreshTimer: number
+let scheduleTimer: number
+
+const calculateDelayToNextMondayTen = (): number => {
+  const now = new Date()
+  const dayOfWeek = now.getDay() // 0=Sunday, 1=Monday
+  const daysUntilMonday = (8 - dayOfWeek) % 7 || 0
+
+  const target = new Date(now)
+  target.setDate(now.getDate() + daysUntilMonday)
+  target.setHours(10, 0, 0, 0)
+
+  if (target <= now) {
+    target.setDate(target.getDate() + 7)
+  }
+
+  return target.getTime() - now.getTime()
+}
+
+const scheduleWeeklyRefresh = () => {
+  const delay = calculateDelayToNextMondayTen()
+  scheduleTimer = window.setTimeout(() => {
+    initDashboard({ forceRefresh: true })
+    scheduleWeeklyRefresh()
+  }, delay) as unknown as number
+}
 
 onMounted(() => {
-  // 初始化仪表板
   initDashboard()
-  
-  // 初始化时间
   updateTime()
-  
-  // 每秒更新时间
   timeTimer = setInterval(updateTime, 1000) as unknown as number
-  
-  // 每 5 分钟刷新数据
-  refreshTimer = setInterval(() => initDashboard(), 5 * 60 * 1000) as unknown as number
-  hardRefreshTimer = setInterval(() => initDashboard({ forceRefresh: true }), 60 * 60 * 1000) as unknown as number
+  scheduleWeeklyRefresh()
 })
 
 onUnmounted(() => {
   if (timeTimer) clearInterval(timeTimer)
-  if (refreshTimer) clearInterval(refreshTimer)
-  if (hardRefreshTimer) clearInterval(hardRefreshTimer)
+  if (scheduleTimer) clearTimeout(scheduleTimer)
 })
 </script>
 

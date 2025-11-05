@@ -1,11 +1,16 @@
 <template>
   <div class="commit-scroller">
     <h2>🏆 Top Contributors</h2>
-    <div class="scroller-container" v-if="contributors.length > 0">
-      <transition-group name="slide" tag="div" class="contributor-list">
-        <div 
-          v-for="contributor in visibleContributors" 
-          :key="contributor.email"
+    <div class="scroller-container" v-if="sortedContributors.length > 0">
+      <div
+        class="marquee-track"
+        :class="{ animate: shouldAnimate }"
+        :style="animationStyle"
+        ref="marqueeRef"
+      >
+        <div
+          v-for="(contributor, index) in marqueeContributors"
+          :key="`${contributor.email}-${index}`"
           class="contributor-card"
         >
           <div class="rank">#{{ contributor.rank }}</div>
@@ -28,7 +33,7 @@
             </div>
           </div>
         </div>
-      </transition-group>
+      </div>
     </div>
     <div class="no-data" v-else>
       <p>暂无贡献者数据</p>
@@ -37,15 +42,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Contributor } from '../typings'
 
 const props = defineProps<{
   contributors: Contributor[]
 }>()
 
-const currentIndex = ref(0)
-const pageSize = 6 // 每页显示 6 个
+const SPEED_PX_PER_SEC = 30
+
+const marqueeRef = ref<HTMLDivElement | null>(null)
+const animationDuration = ref(0)
 
 const numberFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
@@ -64,47 +71,59 @@ const formatSigned = (value: number) => {
   return `${prefix}${numberFormatter.format(Math.abs(Math.round(value)))}`
 }
 
-// 当前可见的贡献者
-const visibleContributors = computed(() => {
-  if (props.contributors.length === 0) return []
-  
-  const start = currentIndex.value
-  const end = start + pageSize
-  
-  // 如果不够一页，从头补充
-  if (end <= props.contributors.length) {
-    return props.contributors.slice(start, end)
-  } else {
-    const firstPart = props.contributors.slice(start)
-    const remaining = pageSize - firstPart.length
-    const secondPart = props.contributors.slice(0, remaining)
-    return [...firstPart, ...secondPart]
-  }
+const sortedContributors = computed(() => {
+  const list = [...props.contributors]
+  list.sort((a, b) => {
+    const scoreDiff = (b.contributionScore ?? 0) - (a.contributionScore ?? 0)
+    if (scoreDiff !== 0) return scoreDiff
+    const additionDiff = (b.additions ?? 0) - (a.additions ?? 0)
+    if (additionDiff !== 0) return additionDiff
+    return (b.commits ?? 0) - (a.commits ?? 0)
+  })
+  return list
 })
 
-// 自动滚动
-let scrollTimer: number
+const shouldAnimate = computed(() => sortedContributors.value.length > 6)
 
-const autoScroll = () => {
-  currentIndex.value += 1
-  
-  // 循环滚动
-  if (currentIndex.value >= props.contributors.length) {
-    currentIndex.value = 0
+const marqueeContributors = computed(() => {
+  if (shouldAnimate.value) {
+    return [...sortedContributors.value, ...sortedContributors.value]
   }
+  return sortedContributors.value
+})
+
+const animationStyle = computed(() => {
+  if (!shouldAnimate.value || animationDuration.value <= 0) {
+    return { animation: 'none' }
+  }
+  return { animationDuration: `${animationDuration.value}s` }
+})
+
+const updateAnimation = () => {
+  if (!marqueeRef.value || !shouldAnimate.value) {
+    animationDuration.value = 0
+    return
+  }
+  const totalHeight = marqueeRef.value.scrollHeight
+  const distance = totalHeight / 2 // 因为列表重复了一遍
+  animationDuration.value = distance > 0 ? distance / SPEED_PX_PER_SEC : 0
 }
 
+const handleResize = () => {
+  nextTick(() => updateAnimation())
+}
+
+watch(() => props.contributors, () => {
+  nextTick(() => updateAnimation())
+})
+
 onMounted(() => {
-  if (props.contributors.length > pageSize) {
-    // 每 3 秒滚动一次
-    scrollTimer = setInterval(autoScroll, 3000) as unknown as number
-  }
+  nextTick(() => updateAnimation())
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
-  if (scrollTimer) {
-    clearInterval(scrollTimer)
-  }
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -130,10 +149,19 @@ onUnmounted(() => {
     overflow: hidden;
   }
   
-  .contributor-list {
+  .marquee-track {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    animation-name: scroll-up;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-duration: 20s;
+    animation-play-state: paused;
+  }
+
+  .marquee-track.animate {
+    animation-play-state: running;
   }
   
   .contributor-card {
@@ -238,20 +266,14 @@ onUnmounted(() => {
   }
 }
 
-// 滑动动画
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.5s ease;
-}
+@keyframes scroll-up {
+  0% {
+    transform: translateY(0);
+  }
 
-.slide-enter-from {
-  transform: translateY(100%);
-  opacity: 0;
-}
-
-.slide-leave-to {
-  transform: translateY(-100%);
-  opacity: 0;
+  100% {
+    transform: translateY(-50%);
+  }
 }
 </style>
 

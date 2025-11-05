@@ -25,6 +25,4 @@ dist-ssr
 
 repos/*
 
-venv/*
-
 .env
