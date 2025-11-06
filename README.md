@@ -1,41 +1,54 @@
 # CODE996 数据看板
 
-实时展示多项目代码提交情况以及 AI 编写占比的可视化系统，涵盖前后端一体化的一键启动体验。
+CODE996 Dashboard 是一个聚合多 Git 仓库提交信息的可视化系统，专注展示团队的工作/加班时段分布、周内节奏、贡献者榜单以及 AI 代码占比。项目提供“一次配置、随时监控”的体验，适合团队大屏展示与工作强度分析。
 
 ---
 
-## ✨ 亮点功能
+## 核心能力
 
-- **一键启动脚本**：`start-all.bat` / `start-all.sh` 自动完成依赖检查、后端启动、前端启动与健康检查。
-- **多项目数据聚合**：支持通过 URL 传入多个仓库地址自动汇总 Commit、贡献者与 996 指标。
-- **AI 代码占比分析**：调用外部 LLM 服务估算项目内 AI 生成代码占比，并做可视化展示。
-- **Redis/内存双模缓存**：默认使用 Redis，缺省时自动降级为内存缓存不停机。
-- **贡献度排行升级**：基于代码变更行数衡量个人贡献，兼顾新增、删除与平均单次影响。
-- **柱状图满幅渲染**：通过自定义 `chart.xkcd` 补丁与 `chartMargins` 配置，让 x/y 轴在卡片内自动撑满，更适合大屏展示。
-- **贡献者慢速匀速滚动**：底部榜单采用 `requestAnimationFrame` 驱动的丝滑循环滚动，长列表也能持续播放无明显跳帧。
-
----
-
-## ✅ 项目状态
-
-- **前端**：已完成（Vue 3 + TypeScript + chart.xkcd）
-- **后端**：已完成（Flask + GitPython + Redis 降级缓存）
-- **脚本**：Windows / macOS / Linux 一键启动与停止脚本均可用
+- **多仓库聚合**：通过 URL 参数批量指定仓库（本地别名或远程地址），后端并发抓取并整合时间序列、周度分布与 996 指标。
+- **时间维度洞察**：内建“工作/加班”与“工作日/周末”拆分，当前逻辑将周一至周五 9:00-18:00 视为工作时间，其它全部视为加班，确保统计口径清晰。
+- **AI 代码占比**：联通外部 LLM 服务估算 AI 生成行数，并在饼图中呈现 AI / 人工占比。
+- **顺滑可视化体验**：前端基于 Vue 3 + TypeScript + `chart.xkcd` 定制封装，包含满幅柱状图、渐入动画与贡献者循环滚动。
+- **缓存 & 健康监控**：后端使用 Redis 优先、内存降级的缓存策略，并开放健康检查接口供脚本自检。
+- **跨平台启动脚本**：提供 `start-all` / `stop-all` 脚本，自动处理依赖校验、服务启动、日志落盘、缓存预热。
 
 ---
 
-## 🚀 快速开始
+## 技术栈
 
-### 方式一：一键启动（推荐）
+- **前端**：Vue 3、TypeScript、Vite、Sass、`chart.xkcd`
+- **后端**：Flask、GitPython、Redis/内存缓存、pydantic 校验
+- **脚本/工具**：Python 虚拟环境、Node 包管理、跨平台启动脚本、日志轮转
+
+项目结构简览：
+
+```
+app/
+  api/          # Flask 路由与响应封装
+  services/     # Git 同步、统计聚合、缓存等服务
+  utils/        # 指标计算、格式化工具
+  models/       # Commit、DashboardStats 等数据模型
+src/
+  views/        # Vue 页面入口
+  components/   # 图表、贡献者滚动等组件
+  utils/        # 前端 chart 封装、时间工具
+scripts/        # 启动/诊断脚本、默认项目读取
+```
+
+---
+
+## 快速启动
+
+### 1. 一键脚本（推荐）
 
 **Windows**
 
 ```powershell
 start-all.bat
-# 运行结束后访问提示的仪表盘地址，例如:
-# http://localhost:3801/?projects=https-gitea-zhifukj-com-cn-zhifukeji-dev-docs-59c55330e4d2
+# 根据提示访问仪表盘，例如 http://localhost:3801/?projects=repoA,repoB
 
-# 关闭全部服务
+# 停止全部服务
 stop-all.bat
 ```
 
@@ -43,129 +56,96 @@ stop-all.bat
 
 ```bash
 bash start-all.sh
-# 关闭
+# 停止
 bash stop-all.sh
 ```
 
-脚本会自动：
+脚本会完成：环境检查 → 依赖安装 → 后端启动 → 健康检查 → 数据预热 → 前端启动，并输出访问地址和日志目录。
 
-1. 检查 Python / Node 环境并安装依赖
-2. 初始化虚拟环境、安装后端依赖
-3. 启动 Flask 后端并执行健康检查
-4. 预热默认项目数据并启动前端 Vite 服务
-5. 输出仪表盘访问地址与日志路径
-
-### 方式二：手动启动
+### 2. 手动启动（可自定义流程）
 
 ```bash
 # 后端
 python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+source venv/bin/activate          # Windows 使用 venv\Scripts\activate
 pip install -r requirements.txt
-python run.py                     # 默认 http://localhost:9970
+python run.py                     # 默认监听 http://localhost:9970
 
-# 前端（另开终端）
+# 前端（新终端）
 npm install
-npm run dev                       # 默认 http://localhost:3801
+npm run dev                       # 默认监听 http://localhost:3801
 
-# 在浏览器访问
-http://localhost:3801/?projects=<项目标识1>,<项目标识2>
+# 浏览器访问，projects 参数使用逗号分隔
+http://localhost:3801/?projects=<项目1>,<项目2>
 ```
 
----
-
-## 🔧 配置说明
-
-### projects.json
-
-用于声明需要汇总的本地仓库路径或远程仓库地址。执行启动脚本时若不存在，会自动从 `projects.json.example` 创建。
-
-### 环境变量
-
-- `.env`（可选）：覆盖默认的 Redis、AI 分析器等配置。
-- 关键变量请参考 `后端技术开发文档.md` 与 `app/settings.py`。
-
-### 默认项目
-
-脚本会调用 `scripts/get_default_projects.py` 读取默认项目列表，亦可通过 `?projects=` URL 参数传入任意逗号分隔的仓库地址或本地目录别名。
-
-### 图表与滚动细节
-
-- **柱状图边距**：在 `src/components/charts/BarChart.vue` 中通过 `chartOptions.chartMargins` 调整四周留白；底层逻辑由 `src/utils/chartXkcd.ts` 自动套用到 `chart.xkcd`，无需改动第三方库。
-- **贡献者滚动速度**：`CommitScroller` 使用常量 `SCROLL_SPEED_PX_PER_SEC`（默认 12）控制滚动速度；若用于更大屏幕，可在组件内调整该数值。
+> 若需刷新统计缓存，可在 URL 上追加 `&force_refresh=1`，或在页面选择“重试加载”。
 
 ---
 
-## 📚 相关文档
+## 配置指南
 
-- [后端重构与前端接入指导.md](./后端重构与前端接入指导.md)：整体架构、改造背景与对接流程
-- [API接口文档.md](./API接口文档.md)：详细接口协议与字段说明
-- [后端技术开发文档.md](./后端技术开发文档.md)：后端实现细节、模块说明
-- [前端技术开发方案.txt](./前端技术开发方案.txt)：前端页面结构、组件设计与样式规范
+- **projects.json**：定义常用项目的本地映射或远程仓库地址。启动脚本会从 `projects.json.example` 自动拷贝缺省文件。
+- **环境变量**：可在 `.env` 中覆盖 Redis、AI 分析服务等配置，详见 `app/settings.py` 及《后端技术开发文档》。
+- **时区说明**：后端按照 commit 时间的原始时区数据计算指标，请确保仓库提交记录的时区正确，或在 Git 上配置统一的 `TZ`。
+- **缓存策略**：`/api/dashboard/summary` 与 `/api/dashboard/contributors` 默认缓存 5 分钟，传入 `force_refresh=1` 可立即刷新。
 
 ---
 
-## 🧪 测试与验证
+## 仪表盘说明
+
+- **按小时分布**：展示 24 小时提交数量，奇偶刻度交替显示以增强可读性。
+- **按天分布**：周一至周日提交量，可快速识别工作日与周末节奏。
+- **工作/加班占比**：后端根据 `Commit.is_work_hour` 标识（周一至周五 9:00-18:00 为工作，其余为加班）统计饼图。
+- **工作日/周末占比**：区分周内与周末提交总量。
+- **AI 编写比例**：汇总外部 AI 服务返回的行数，未获取到有效数据时使用伪装填充以保持图表完整。
+- **贡献者滚动榜**：按综合贡献度排序，滚动速度可在 `src/components/CommitScroller.vue` 中调节。
+
+---
+
+## API 概览
+
+| 接口 | 方法 | 示例 | 说明 |
+|------|------|------|------|
+| 汇总数据 | GET | `/api/dashboard/summary?projects=repoA,repoB` | 返回总提交、按小时/按日分布、工作/加班比例等字段 |
+| 贡献者列表 | GET | `/api/dashboard/contributors?projects=repoA,repoB` | 合并去重后的贡献者排行榜 |
+| 健康检查 | GET | `/api/dashboard/health` | 启动脚本的心跳接口 |
+| AI 代码比例 | GET | `/api/ai-ratio?repo=repoA` | 单项目的 AI/人工行数统计 |
+
+详细字段定义见 `API接口文档.md`。
+
+---
+
+## 验证与调试
 
 ```bash
 # 后端健康检查
 curl http://localhost:9970/api/dashboard/health
 
-# 汇总与贡献者 API
-curl "http://localhost:9970/api/dashboard/summary?projects=test1,test2"
-curl "http://localhost:9970/api/dashboard/contributors?projects=test1,test2"
+# 强制刷新统计数据
+curl "http://localhost:9970/api/dashboard/summary?projects=test&force_refresh=1"
 
-# AI 代码比例
-curl "http://localhost:9970/api/ai-ratio?repo=test1"
+# 贡献者信息
+curl "http://localhost:9970/api/dashboard/contributors?projects=test"
+
+# AI 比例
+curl "http://localhost:9970/api/ai-ratio?repo=test"
 ```
 
-推荐在浏览器打开仪表盘并确认四个图表 + AI 饼图 + 贡献者列表全部正常渲染。
+推荐打开浏览器确认所有图表与滚动榜正常渲染，再结合 `logs/` 目录中的后端、前端、脚本日志排查潜在问题。
 
 ---
 
-## 📡 API 概览
+## 常见问题
 
-| 接口 | 方法 | 路径 | 说明 |
-|------|------|------|------|
-| 汇总数据 | GET | `/api/dashboard/summary?projects=xxx` | 多仓库 996 指标与 Commit 统计 |
-| 贡献者列表 | GET | `/api/dashboard/contributors?projects=xxx` | 按 Commit 数量排序的成员列表 |
-| 健康检查 | GET | `/api/dashboard/health` | 服务状态检查，用于脚本心跳 |
-| AI 代码比例 | GET | `/api/ai-ratio?repo=xxx` | 单项目 AI 代码与人工代码占比 |
+- **饼图数据不更新？** 检查是否命中缓存；在请求上加 `force_refresh=1` 或重启后端即可使新逻辑生效。
+- **Redis 未部署？** 系统自动回退到进程内缓存，功能不受影响；部署 Redis 后重启即可接管。
+- **启动脚本失败？** 检查 9970/3801 端口是否被占用，或直接运行 `python run.py`、`npm run dev` 获取详细日志。
+- **AI 分析异常？** 核对 `.env` 中的 API URL/Key/模型配置，待外部服务恢复后重新刷新。
+- **贡献者滚动过快？** 在 `CommitScroller` 组件中调整 `SCROLL_SPEED_PX_PER_SEC` 常量。
 
-更详细的字段定义请参见 [API接口文档.md](./API接口文档.md)。
 
 ---
 
-## 🛠️ 常见问题
 
-- **健康检查一直显示 ERR？** 请确认 9970 端口未被占用，并查看 `logs/backend.log`。脚本已改进为宽容处理启动日志，若依旧失败可单独运行 `python run.py` 查看输出。
-- **Redis 未启动怎么办？** 系统会自动降级为进程内内存缓存，可以稍后再连上 Redis。
-- **AI 分析失败？** 确认 `.env` 内 AI 分析服务的 endpoint、API Key 与模型配置正确，或等待重试。
-- **前端空白？** 检查 `npm run dev` 是否启动成功，浏览器控制台是否存在跨域或网络错误。
-
-更多排查技巧请参考 [后端重构与前端接入指导.md](./后端重构与前端接入指导.md) 的 FAQ 部分。
-
----
-
-## 📂 日志与排查
-
-- 后端实时日志：`logs/backend.log`
-- 前端输出：`logs/frontend.log`
-- 启动脚本记录：`logs/startup-<timestamp>.log`
-- Flask 应用日志轮转：`logs/app.log`
-
-如需诊断，可配合 `diagnose.sh` / `diagnose.bat` 脚本收集信息。
-
----
-
-## ✅ 开发完成清单
-
-- [ ] `start-all` / `stop-all` 脚本往返成功，无健康检查错误
-- [ ] 仪表盘页面 5 个可视化组件全部加载
-- [ ] 后端 API 返回时间 < 2s（默认数据量）
-- [ ] 追加新项目后，`projects.json` / URL 参数生效
-- [ ] 关键日志落盘，便于排查
-
----
-
-如需要更多帮助，请通过日志、文档或提 Issue 的方式联系我们。祝使用愉快！🚀
+若你在使用中遇到问题，欢迎通过 Issue / PR / 邮件反馈。祝使用顺利，数据常亮！

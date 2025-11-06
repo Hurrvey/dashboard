@@ -32,12 +32,12 @@ class Commit:
     
     @property
     def is_work_hour(self) -> bool:
-        """是否工作时间 (9:00-18:00)"""
-        return 9 <= self.hour < 18
+        """是否工作时间 (周一-周五 9:00-18:00)"""
+        return self.is_weekday and 9 <= self.hour < 18
     
     @property
     def is_overtime(self) -> bool:
-        """是否加班时间 (18:00-9:00)"""
+        """其它时间均视为加班时间"""
         return not self.is_work_hour
     
     @property

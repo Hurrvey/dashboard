@@ -52,7 +52,7 @@ const marqueeRef = ref<HTMLDivElement | null>(null)
 const translateY = ref(0)
 const enableAnimation = ref(false)
 const contentHeight = ref(0)
-const SCROLL_SPEED_PX_PER_SEC = 12
+const SCROLL_SPEED_PX_PER_SEC = 18
 
 let animationFrameId: number | null = null
 let lastTimestamp: number | null = null
@@ -87,20 +87,13 @@ const sortedContributors = computed(() => {
 })
 
 const marqueeContributors = computed(() => {
-  if (enableAnimation.value) {
-    return [...sortedContributors.value, ...sortedContributors.value]
-  }
-  return sortedContributors.value
+  if (!sortedContributors.value.length) return []
+  return [...sortedContributors.value, ...sortedContributors.value]
 })
 
-const marqueeStyle = computed(() => {
-  if (!enableAnimation.value) {
-    return { transform: 'translateY(0)' }
-  }
-  return {
-    transform: `translateY(-${translateY.value}px)`
-  }
-})
+const marqueeStyle = computed(() => ({
+  transform: `translateY(-${translateY.value}px)`
+}))
 
 const stopScrolling = () => {
   if (animationFrameId !== null) {
@@ -139,14 +132,12 @@ const updateMeasurements = () => {
 
   const containerHeight = marqueeRef.value.parentElement?.clientHeight ?? 0
   const totalHeight = marqueeRef.value.scrollHeight
-  const baseHeight = enableAnimation.value ? totalHeight / 2 : totalHeight
+  contentHeight.value = totalHeight / 2
 
-  contentHeight.value = baseHeight
-
-  const shouldEnable = baseHeight > containerHeight + 8 && sortedContributors.value.length > 0
-
-  if (shouldEnable !== enableAnimation.value) {
-    enableAnimation.value = shouldEnable
+  if (totalHeight > containerHeight && sortedContributors.value.length > 0) {
+    enableAnimation.value = true
+  } else {
+    enableAnimation.value = false
     translateY.value = 0
   }
 }
@@ -203,28 +194,33 @@ onUnmounted(() => {
 .commit-scroller {
   width: 100%;
   height: 100%;
-  background-color: #212121;
-  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  background-color: #2a2a2a;
+  padding: 0px 30px 30px;
   overflow: hidden;
-  
+
   h2 {
-    font-size: 2em;
+    font-size: clamp(2.4rem, 3.2vw, 3.2rem);
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     color: #de335e;
     text-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
     font-family: 'vcr-osd', monospace;
   }
-  
+
   .scroller-container {
-    height: calc(100% - 100px);
+    flex: 0 0 clamp(1300px, 52vh, 1350px);
+    height: clamp(1300px, 52vh, 1350px);
     overflow: hidden;
+    position: relative;
+    align-self: stretch;
   }
-  
+
   .marquee-track {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
     will-change: transform;
   }
   
@@ -232,64 +228,64 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     background-color: #2a2a2a;
-    padding: 20px 30px;
+    padding: 14px 24px;
     box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
-    border: 2px solid #444;
+    border: 1px solid #3a3a3a;
     transition: all 0.3s;
-    
+
     &:hover {
       transform: translateX(10px);
       border-color: #de335e;
     }
-    
+
     .rank {
-      font-size: 2em;
+      font-size: 1.6em;
       font-family: 'vcr-osd', monospace;
       color: #de335e;
-      min-width: 80px;
+      min-width: 64px;
       text-align: center;
     }
-    
+
     .avatar {
-      font-size: 3em;
-      margin: 0 30px;
+      font-size: 2.4em;
+      margin: 0 24px;
     }
-    
+
     .info {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
 
       .name {
-        font-size: 1.5em;
+        font-size: 1.2em;
         color: #fff;
       }
 
       .email {
-        font-size: 0.9em;
+        font-size: 0.8em;
         color: #999;
       }
 
       .metrics {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
 
         .metric-major {
           display: flex;
           align-items: baseline;
-          gap: 10px;
+          gap: 8px;
 
           .value {
-            font-size: 2.4em;
+            font-size: 1.8em;
             font-family: 'vcr-osd', monospace;
             color: #4CAF50;
             font-weight: bold;
           }
 
           .label {
-            font-size: 1em;
+            font-size: 0.85em;
             color: #9acd32;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -299,18 +295,18 @@ onUnmounted(() => {
         .metric-detail {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 8px 12px;
-          font-size: 0.85em;
+          gap: 6px 10px;
+          font-size: 0.75em;
           color: #bbb;
 
           span {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 6px;
-            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 5px;
+            padding: 5px 8px;
           }
         }
       }

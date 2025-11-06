@@ -23,6 +23,7 @@ type AnyChart = {
   width: number
   height: number
   options?: PatchedOptions
+  render?: (...args: any[]) => any
 }
 
 const extractTranslate = (transform: string | undefined | null) => {
@@ -96,6 +97,89 @@ const ensurePatched = () => {
 }
 
 ensurePatched()
+
+const ensurePiePatched = () => {
+  const proto = chartXkcd.Pie?.prototype as AnyChart & { __fullSizePiePatched__?: boolean }
+  if (!proto || proto.__fullSizePiePatched__) {
+    return
+  }
+
+  const originalRender = proto.render as (...args: any[]) => any
+  if (typeof originalRender !== 'function') {
+    return
+  }
+
+  proto.render = function patchedPieRender(this: AnyChart, ...args: any[]) {
+    const svgSelection = this.svgEl as AnyChart['svgEl']
+    const chartSelection = this.chart as AnyChart['chart']
+
+    const marginOption: MarginConfig | undefined = this.options?.chartMargins || this.options?.margins
+    const marginLeft = marginOption?.left ?? 0
+    const marginRight = marginOption?.right ?? 0
+    const marginTop = marginOption?.top ?? 0
+    const marginBottom = marginOption?.bottom ?? 0
+
+    let safeWidth = 0
+    let safeHeight = 0
+
+    const svgNode = svgSelection?.node?.() ?? null
+    const container = svgNode?.parentElement ?? null
+
+    const declaredWidth = Number(svgSelection?.attr?.('width')) || 0
+    const declaredHeight = Number(svgSelection?.attr?.('height')) || 0
+
+    if (container?.clientWidth) {
+      safeWidth = container.clientWidth
+    } else if (declaredWidth) {
+      safeWidth = declaredWidth
+    }
+
+    if (container?.clientHeight) {
+      safeHeight = container.clientHeight
+    } else if (declaredHeight) {
+      safeHeight = declaredHeight
+    }
+
+    if (!safeWidth) {
+      safeWidth = Math.max(this.width + marginLeft + marginRight, 1)
+    }
+
+    if (!safeHeight) {
+      safeHeight = safeWidth
+    }
+
+    safeWidth = Math.max(safeWidth, 1)
+    safeHeight = Math.max(safeHeight, 1)
+
+    const availableWidth = Math.max(safeWidth - (marginLeft + marginRight), 10)
+    const availableHeight = Math.max(safeHeight - (marginTop + marginBottom), 10)
+    const innerSize = Math.max(Math.min(availableWidth, availableHeight), 10)
+
+    this.width = innerSize
+    this.height = innerSize
+
+    if (svgSelection?.attr) {
+      svgSelection.attr('width', safeWidth)
+      svgSelection.attr('height', safeHeight)
+    }
+
+    svgNode?.setAttribute('viewBox', `0 0 ${safeWidth} ${safeHeight}`)
+
+    const result = originalRender.apply(this, args)
+
+    if (chartSelection?.attr) {
+      const translateX = marginLeft + innerSize / 2
+      const translateY = marginTop + innerSize / 2
+      chartSelection.attr('transform', `translate(${translateX},${translateY})`)
+    }
+
+    return result
+  }
+
+  proto.__fullSizePiePatched__ = true
+}
+
+ensurePiePatched()
 
 export default chartXkcd
 

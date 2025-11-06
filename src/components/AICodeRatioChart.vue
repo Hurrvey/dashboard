@@ -89,7 +89,7 @@ const chartData = computed(() => [
   
   .chart-container {
     width: 100%;
-    max-width: 450px;
+    max-width: 600px;
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
@@ -109,14 +109,14 @@ const chartData = computed(() => [
       align-items: center;
       
       .label {
-        font-size: 1.1em;
+        font-size: 1.25em;
         color: #999;
         margin-bottom: 10px;
         font-family: 'Pixel', sans-serif;
       }
       
       .value {
-        font-size: 2.5em;
+        font-size: 2.9em;
         font-family: 'vcr-osd', monospace;
         font-weight: bold;
       }
@@ -162,11 +162,11 @@ const chartData = computed(() => [
 @media (max-height: 800px) {
   .ai-ratio-chart {
     .chart-container {
-      max-width: 350px;
+      max-width: 460px;
     }
     
     .stats .stat-item .value {
-      font-size: 2em;
+      font-size: 2.3em;
     }
   }
 }
@@ -174,9 +174,14 @@ const chartData = computed(() => [
 @media (min-height: 1000px) {
   .ai-ratio-chart {
     .chart-container {
-      max-width: 500px;
+      max-width: 640px;
     }
   }
+}
+
+:deep(.chart-container svg g[class*="legend"] text),
+:deep(.chart-container svg g[class*="legend"] tspan) {
+  font-size: 1.6rem;
 }
 </style>
 

@@ -4,203 +4,222 @@
   height: 100vh;
   overflow: hidden;
   background-color: #212121;
+  padding: clamp(16px, 2vh, 24px) clamp(20px, 3vw, 36px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 
   .dashboard-inner {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: auto minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: clamp(16px, 2vh, 24px);
+    min-height: 0;
   }
 
   .dashboard-header {
-    height: 12vh;
-    background-color: #2a2a2a;
+    background: #2a2a2a;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    
+    justify-content: center;
+    padding: clamp(12px, 1.8vh, 20px) clamp(22px, 3.8vw, 44px);
+    text-align: center;
+
     h1 {
       font-family: 'vcr-osd', monospace;
-      font-size: clamp(2.2rem, 2.8vh, 2.8rem);
+      font-size: clamp(3.5rem, 3vw, 2.7rem);
       color: #de335e;
-      text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
-      margin-bottom: 10px;
+      letter-spacing: 2px;
+      text-shadow: px 4px 0 rgba(0, 0, 0, 0.24);
+      margin-bottom: 5px;
     }
-    
+
     .meta {
       display: flex;
-      gap: clamp(24px, 3.2vh, 36px);
-      font-size: clamp(1rem, 1.6vh, 1.2rem);
-      color: #999;
-      
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(14px, 2.2vw, 32px);
+      font-size: clamp(0.95rem, 1.45vw, 1.2rem);
+      color: #aaa;
+
       span {
+        font-family: 'Pixel', sans-serif;
+
         &.time {
-          color: #4CAF50;
+          color: #4caf50;
           font-family: 'vcr-osd', monospace;
         }
       }
     }
   }
-  
+
   .top-section {
-    height: 60vh;
-    padding: clamp(18px, 2.5vh, 32px);
+    position: relative;
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(18px, 2vh, 28px);
+    
 
-    .charts-grid {
-      height: 100%;
+    .chart-row {
       display: grid;
+      gap: clamp(16px, 2vh, 24px);
+      min-height: 0;
+      flex: 1 1 0;
+      height: 0;
+      
+    }
+
+    .chart-row--distribution {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-template-rows: 1.5fr 1fr 1fr;
-      gap: clamp(18px, 2.4vh, 32px);
+      grid-auto-rows: minmax(0, 1fr);
+      flex: 0 0 clamp(540px, 28vh, 600px);
+      height: auto;
+    }
 
-      .chart-item {
-        background-color: #2a2a2a;
-        padding: clamp(16px, 2.2vh, 26px);
-        box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        min-width: 0;
-        overflow: visible;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
+    .chart-row--ratio {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: minmax(0, 1fr);
+      align-items: stretch;
+      flex: 1 1 0;
+    }
+
+    .chart-item {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: clamp(10px, 1.4vh, 14px);
+      padding: clamp(10px, 1.2vh, 16px);
+      border-radius: 12px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      background-color: #2a2a2a;
+    }
+
+    .chart-item--pie {
+      min-height: 0;
+      align-content: stretch;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 12px;
+      padding: clamp(4px, 0.6vh, 6px) 0;
+    }
+
+    .chart-title {
+      font-size: clamp(1rem, 1.9vw, 3rem);
+      color: #fff;
+      font-family: 'Pixel', sans-serif;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .chart-body {
+      display: flex;
+      flex: 1 1 0;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      border-radius: 8px;
+      background: transparent;
+      padding: clamp(8px, 1vh, 12px);
+    }
+
+    .chart-body--bar {
+      align-items: stretch;
+      justify-content: stretch;
+
+      > * {
+        flex: 1 1 auto;
+        width: 100%;
         height: 100%;
-
-        .chart-title {
-          font-size: clamp(1.3rem, 2.1vh, 1.7rem);
-          color: #fff;
-          margin-bottom: clamp(12px, 1.6vh, 18px);
-          text-align: left;
-          font-family: 'Pixel', sans-serif;
-          flex-shrink: 0;
-        }
-
-        .chart-body {
-          flex: 1;
-          min-height: 0;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: clamp(12px, 1.6vh, 16px);
-        }
-
-        .chart-body--bar {
-          flex: 1;
-          min-height: 0;
-          align-items: stretch;
-          box-sizing: border-box;
-          padding: clamp(14px, 1.6vh, 22px) clamp(10px, 1.2vw, 18px);
-
-          > * {
-            flex: 1 1 auto;
-            width: 100%;
-            height: 100%;
-            min-width: 0;
-            min-height: 0;
-            overflow: visible;
-          }
-        }
-
-        .chart-body--pie {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-          gap: clamp(16px, 2vh, 28px);
-          padding: clamp(10px, 1.4vh, 18px);
-        }
-
-        .chart-graphic {
-          flex: 0 0 clamp(420px, 72%, 640px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 0;
-
-          > * {
-            width: 100%;
-            height: 100%;
-            max-width: 100%;
-            max-height: 100%;
-            overflow: visible;
-          }
-        }
-
-        .chart-description {
-          flex: 0 1 clamp(200px, 28%, 260px);
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: clamp(14px, 2vh, 20px);
-          color: #ddd;
-          font-size: clamp(1.1rem, 2vh, 1.3rem);
-          line-height: 1.7;
-          text-align: right;
-          align-items: flex-end;
-
-          p {
-            margin: 0;
-            width: 100%;
-            overflow-wrap: anywhere;
-          }
-
-          strong {
-            font-family: 'Pixel', sans-serif;
-          }
-
-          strong:first-of-type {
-            color: #4CAF50;
-          }
-
-          strong:last-of-type {
-            color: #de335e;
-          }
-        }
-      }
-
-      .chart-item--full {
-        grid-column: 1 / -1;
-        grid-row: 1 / 2;
-      }
-
-      .chart-item--square {
+        min-width: 0;
         min-height: 0;
+        
+      }
+    }
+
+    .chart-body--pie {
+      align-items: center;
+      justify-content: center;
+      padding: clamp(6px, 0.9vh, 12px);
+
+      > * {
+        flex: 1 1 auto;
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
       }
 
-      .chart-item--work-hour {
-        grid-column: 1 / 2;
-        grid-row: 2 / 3;
+      svg {
+        width: 100%;
+        height: 100%;
       }
 
-      .chart-item--week {
-        grid-column: 2 / 3;
-        grid-row: 2 / 3;
+      svg .legend {
+        transform-origin: top right;
+        transform: translate(4%, -6%) scale(1.7);
       }
 
-      .chart-item--work-week {
-        grid-column: 1 / 2;
-        grid-row: 3 / 4;
+      svg .legend text {
+        font-size: clamp(1.6rem, 2.2vw, 2.6rem) !important;
+        font-family: 'Pixel', sans-serif;
+        dominant-baseline: middle;
       }
 
-      .chart-item--ai {
-        grid-column: 2 / 3;
-        grid-row: 3 / 4;
+      svg .legend rect,
+      svg .legend circle,
+      svg .legend path {
+        transform-origin: center;
+        transform: scale(1.7);
+        stroke-width: 2.6;
       }
+    }
 
-      .chart-item--work-hour .chart-description strong:nth-of-type(2),
-      .chart-item--work-week .chart-description strong:nth-of-type(2),
-      .chart-item--ai .chart-description strong:nth-of-type(2) {
-        color: #de335e;
-      }
+    .chart-item--pie .chart-body {
+      width: 100%;
+      position: relative;
+      padding-top: 85%;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .chart-item--pie .chart-body > * {
+      position: absolute;
+      inset: clamp(2px, 0.4vh, 8px);
+      width: auto;
+      height: auto;
     }
   }
 
   .bottom-section {
-    height: 28vh;
-    overflow: hidden;
-    padding: clamp(18px, 2.4vh, 28px);
+    background: transparent;
+    border-radius: 14px;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.4vh, 16px);
+
+    > * {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
   }
 
   .dashboard-overlay {
@@ -217,13 +236,13 @@
     background: rgba(20, 20, 20, 0.92);
 
     .primary {
-      font-size: clamp(1.2rem, 2.4vh, 1.4rem);
+      font-size: clamp(1.1rem, 2vw, 1.4rem);
       color: #fff;
       font-family: 'Pixel', sans-serif;
     }
 
     .secondary {
-      font-size: clamp(0.9rem, 1.6vh, 1.1rem);
+      font-size: clamp(0.95rem, 1.6vw, 1.1rem);
       color: #bbb;
       max-width: 520px;
       line-height: 1.6;
@@ -235,7 +254,7 @@
       background: #de335e;
       border: none;
       color: #fff;
-      font-size: clamp(0.95rem, 1.7vh, 1.1rem);
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
       font-family: 'Pixel', sans-serif;
       cursor: pointer;
       border-radius: 4px;
@@ -255,7 +274,7 @@
 
     h2 {
       color: #fff;
-      font-size: 1.6em;
+      font-size: clamp(1.4rem, 2.8vw, 1.8rem);
       font-family: 'vcr-osd', monospace;
     }
 
@@ -278,29 +297,6 @@
   }
 }
 
-// 小屏适配
-@media (max-height: 800px) {
-  .dashboard {
-    .top-section .charts-grid {
-      gap: 10px;
-      padding: 10px;
-      
-      .chart-item {
-        padding: 10px;
-        
-        .chart-title {
-          font-size: 1em;
-          margin-bottom: 10px;
-        }
-      }
-    }
-    
-    .dashboard-header h1 {
-      font-size: 1.5em;
-    }
-  }
-}
-
 @keyframes dashboard-spin {
   to {
     transform: rotate(360deg);
@@ -317,16 +313,79 @@
   opacity: 0;
 }
 
-
-// 超宽屏适配
-@media (min-width: 2560px) {
+@media (max-width: 1480px) {
   .dashboard {
-    .dashboard-header h1 {
-      font-size: 3em;
+    padding: clamp(12px, 1.6vh, 20px) clamp(16px, 2.5vw, 28px);
+
+    .dashboard-inner {
+      grid-template-rows: auto minmax(0, 0.95fr) minmax(0, 1.05fr);
     }
-    
-    .top-section .charts-grid .chart-item .chart-title {
-      font-size: 1.5em;
+
+    .top-section .chart-row {
+      gap: clamp(14px, 1.6vh, 20px);
+    }
+  }
+}
+
+@media (max-width: 1220px) {
+  .dashboard {
+    .top-section {
+      .chart-row--distribution {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-row--ratio {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  }
+}
+
+@media (max-width: 980px) {
+  .dashboard {
+    padding: clamp(10px, 1.5vh, 16px) clamp(12px, 2.4vw, 20px);
+
+    .dashboard-inner {
+      grid-template-rows: minmax(100px, 14vh) 1fr minmax(160px, 28vh);
+    }
+
+    .dashboard-header {
+      h1 {
+        font-size: clamp(1.8rem, 5vw, 2.3rem);
+      }
+
+      .meta {
+        font-size: clamp(0.9rem, 2.6vw, 1.1rem);
+        gap: clamp(10px, 2.4vw, 18px);
+      }
+    }
+
+    .top-section {
+      .chart-row {
+        gap: clamp(12px, 1.4vh, 16px);
+      }
+
+      .chart-row--distribution {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-row--ratio {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .bottom-section {
+      padding: clamp(12px, 1.4vh, 18px) clamp(14px, 1.6vw, 20px);
+    }
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard {
+    .top-section {
+      .chart-row--ratio {
+        grid-template-columns: 1fr;
+      }
     }
   }
 }

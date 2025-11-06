@@ -1,106 +1,86 @@
 <template>
-<div class="dashboard">
-  <transition name="fade" mode="out-in">
-    <div v-if="isLoading" key="loading" class="dashboard-overlay loading-state" role="status" aria-live="polite">
-      <div class="pixel-spinner"></div>
-      <p class="primary">{{ loadingMessage }}</p>
-      <p class="secondary">首次加载远程仓库可能需要几分钟，请耐心等待。</p>
-    </div>
-    <div v-else-if="errorMessage" key="error" class="dashboard-overlay error-state" role="alert">
-      <h2>数据加载失败</h2>
-      <p>{{ errorMessage }}</p>
-      <button type="button" @click="retryLoad">重试加载</button>
-    </div>
-  </transition>
-
-  <div class="dashboard-inner" v-show="!isLoading && !errorMessage">
-    <!-- 顶部标题 -->
-    <header class="dashboard-header">
-      <h1>CODE996 DATA DASHBOARD</h1>
-      <div class="meta">
-        <span>项目数: {{ projectCount }}</span>
-        <span>总提交数: {{ totalCommits }}</span>
-        <span class="time">{{ currentTime }}</span>
+  <div class="dashboard">
+    <transition name="fade" mode="out-in">
+      <div v-if="isLoading" key="loading" class="dashboard-overlay loading-state" role="status" aria-live="polite">
+        <div class="pixel-spinner"></div>
+        <p class="primary">{{ loadingMessage }}</p>
+        <p class="secondary">首次加载远程仓库可能需要几分钟，请耐心等待。</p>
       </div>
-    </header>
-    
-    <!-- 上半部分 -->
-    <section class="top-section">
-      <div class="charts-grid">
-        <div class="chart-item chart-item--full chart-item--hourly">
-          <div class="chart-title">按小时 commit 分布</div>
-          <div class="chart-body chart-body--bar">
-            <BarChart :data="hourData" />
-          </div>
+      <div v-else-if="errorMessage" key="error" class="dashboard-overlay error-state" role="alert">
+        <h2>数据加载失败</h2>
+        <p>{{ errorMessage }}</p>
+        <button type="button" @click="retryLoad">重试加载</button>
+      </div>
+    </transition>
+
+    <div class="dashboard-inner" v-show="!isLoading && !errorMessage">
+      <!-- 顶部标题 -->
+      <header class="dashboard-header">
+        <h1>CODE996 DATA DASHBOARD</h1>
+        <div class="meta">
+          <span>项目数: {{ projectCount }}</span>
+          <span>总提交数: {{ totalCommits }}</span>
+          <span class="time">{{ currentTime }}</span>
+        </div>
+      </header>
+      
+      <!-- 上半部分 -->
+      <section class="top-section">
+        <div class="chart-row chart-row--distribution">
+          <article class="chart-item">
+            <header class="chart-header">
+              <h2 class="chart-title">按小时 commit 分布</h2>
+            </header>
+            <div class="chart-body chart-body--bar">
+              <BarChart :data="hourData" />
+            </div>
+          </article>
+
+          <article class="chart-item">
+            <header class="chart-header">
+              <h2 class="chart-title">按天 commit 分布</h2>
+            </header>
+            <div class="chart-body chart-body--bar">
+              <BarChart :data="weekData" />
+            </div>
+          </article>
         </div>
 
-        <div class="chart-item chart-item--square chart-item--work-hour">
-          <div class="chart-title">工作/加班占比（按小时）</div>
-          <div class="chart-body chart-body--pie">
-            <div class="chart-graphic">
+        <div class="chart-row chart-row--ratio">
+          <article class="chart-item chart-item--pie">
+            <header class="chart-header">
+              <h2 class="chart-title">加班/工作占比（按小时）</h2>
+            </header>
+            <div class="chart-body chart-body--pie">
               <PieChart :data="workHourChartData" />
             </div>
-            <div class="chart-description">
-              <template v-if="workHourSummary.total > 0">
-                <p><strong>工作时间：</strong>{{ workHourSummary.work }} 次 ({{ workHourSummary.workPercent }}%)</p>
-                <p><strong>加班时间：</strong>{{ workHourSummary.overtime }} 次 ({{ workHourSummary.overtimePercent }}%)</p>
-              </template>
-              <p v-else>暂无数据</p>
-            </div>
-          </div>
-        </div>
+          </article>
 
-        <div class="chart-item chart-item--square chart-item--week">
-          <div class="chart-title">按天 commit 分布</div>
-          <div class="chart-body chart-body--bar">
-            <BarChart :data="weekData" />
-          </div>
-        </div>
-
-        <div class="chart-item chart-item--square chart-item--work-week">
-          <div class="chart-title">工作日/周末占比</div>
-          <div class="chart-body chart-body--pie">
-            <div class="chart-graphic">
+          <article class="chart-item chart-item--pie">
+            <header class="chart-header">
+              <h2 class="chart-title">工作日/周末占比</h2>
+            </header>
+            <div class="chart-body chart-body--pie">
               <PieChart :data="workWeekChartData" />
             </div>
-            <div class="chart-description">
-              <template v-if="workWeekSummary.total > 0">
-                <p><strong>工作日：</strong>{{ workWeekSummary.weekday }} 次 ({{ workWeekSummary.weekdayPercent }}%)</p>
-                <p><strong>周末：</strong>{{ workWeekSummary.weekend }} 次 ({{ workWeekSummary.weekendPercent }}%)</p>
-              </template>
-              <p v-else>暂无数据</p>
-            </div>
-          </div>
-        </div>
+          </article>
 
-        <div class="chart-item chart-item--square chart-item--ai">
-          <div class="chart-title">AI 编写代码比例</div>
-          <div class="chart-body chart-body--pie">
-            <div class="chart-graphic">
+          <article class="chart-item chart-item--pie">
+            <header class="chart-header">
+              <h2 class="chart-title">AI 编写代码比例</h2>
+            </header>
+            <div class="chart-body chart-body--pie">
               <PieChart :data="aiRatioChart" />
             </div>
-            <div class="chart-description">
-              <template v-if="aiRatioSummary.total > 0">
-                <p><strong>AI 编写：</strong>{{ aiRatioSummary.ai }} 行 ({{ aiRatioSummary.aiPercent }}%)</p>
-                <p><strong>人工编写：</strong>{{ aiRatioSummary.human }} 行 ({{ aiRatioSummary.humanPercent }}%)</p>
-              </template>
-              <template v-else-if="aiRatioLoading">
-                <p>数据加载中...</p>
-              </template>
-              <template v-else>
-                <p>暂无数据</p>
-              </template>
-            </div>
-          </div>
+          </article>
         </div>
-      </div>
-    </section>
-    
-    <!-- 下半部分 -->
-    <section class="bottom-section">
-      <CommitScroller :contributors="contributors" />
-    </section>
-  </div>
+      </section>
+      
+      <!-- 下半部分 -->
+      <section class="bottom-section">
+        <CommitScroller :contributors="contributors" />
+      </section>
+    </div>
   </div>
 </template>
 
