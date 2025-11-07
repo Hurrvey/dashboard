@@ -49,9 +49,9 @@ load_dotenv()
 
 
 # AI 分析默认配置（可通过环境变量覆盖）
-DEFAULT_AI_ANALYZER_ENDPOINT = 'https://llm-router-new-api.zhifukj.com.cn/v1/chat/completions'
-DEFAULT_AI_ANALYZER_API_KEY = 'sk-esDgULBKSr7a6vy33u70ouoxIcLGdh2Ef4AZnyn9xDRvk9Cr'
-DEFAULT_AI_ANALYZER_MODEL = 'deepseek-chat'
+DEFAULT_AI_ANALYZER_ENDPOINT = 'http://192.168.200.62:7895/v1/chat/completions'
+# DEFAULT_AI_ANALYZER_API_KEY = 'sk-esDgULBKSr7a6vy33u70ouoxIcLGdh2Ef4AZnyn9xDRvk9Cr'
+DEFAULT_AI_ANALYZER_MODEL = 'DeepSeek-R1-Distill-Qwen-14B-Q4_K_M:latest'
 
 
 class Config:
@@ -82,7 +82,7 @@ class Config:
 
     # AI 分析服务配置
     AI_ANALYZER_ENDPOINT = os.getenv('AI_ANALYZER_ENDPOINT', DEFAULT_AI_ANALYZER_ENDPOINT)
-    AI_ANALYZER_API_KEY = os.getenv('AI_ANALYZER_API_KEY', DEFAULT_AI_ANALYZER_API_KEY)
+    # AI_ANALYZER_API_KEY = os.getenv('AI_ANALYZER_API_KEY', DEFAULT_AI_ANALYZER_API_KEY)
     AI_ANALYZER_MODEL = os.getenv('AI_ANALYZER_MODEL', DEFAULT_AI_ANALYZER_MODEL)
     AI_ANALYZER_MAX_TOKENS = int(os.getenv('AI_ANALYZER_MAX_TOKENS', 4096))
     AI_ANALYZER_TIMEOUT = int(os.getenv('AI_ANALYZER_TIMEOUT', 60))

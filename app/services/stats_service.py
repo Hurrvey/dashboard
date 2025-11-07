@@ -50,17 +50,21 @@ class StatsService:
         failed_projects = {}
         
         # 并发处理各个项目
+        revealed_commits: List[Commit] = []
+
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(self._fetch_single_project, name, force_refresh): name
+                executor.submit(self._fetch_single_project_with_meta, name, force_refresh): name
                 for name in project_names
             }
             
             for future in as_completed(futures):
                 project_name = futures[future]
                 try:
-                    commits = future.result(timeout=self.project_timeout)
-                    all_commits.extend(commits)
+                    commits, project_id = future.result(timeout=self.project_timeout)
+                    annotated = self._attach_project_info(commits, project_id, project_name)
+                    all_commits.extend(annotated)
+                    revealed_commits.extend(annotated)
                     successful_projects.append(project_name)
                     logger.info(f"项目 {project_name} 数据获取成功: {len(commits)} commits")
                 except Exception as e:
@@ -69,6 +73,7 @@ class StatsService:
         
         # 生成统计数据
         repo_count = len(successful_projects) if successful_projects else len(project_names)
+        repo_count = max(repo_count, len(set(project_names)))
 
         if failed_projects:
             logger.warning(
@@ -94,22 +99,23 @@ class StatsService:
         Returns:
             贡献者列表（按commits降序）
         """
-        all_commits = []
+        all_commits: List[Commit] = []
         successful_projects = []
         failed_projects = {}
         
         # 并发处理各个项目
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(self._fetch_single_project, name, force_refresh): name
+                executor.submit(self._fetch_single_project_with_meta, name, force_refresh): name
                 for name in project_names
             }
             
             for future in as_completed(futures):
                 project_name = futures[future]
                 try:
-                    commits = future.result(timeout=self.project_timeout)
-                    all_commits.extend(commits)
+                    commits, project_id = future.result(timeout=self.project_timeout)
+                    annotated = self._attach_project_info(commits, project_id, project_name)
+                    all_commits.extend(annotated)
                     successful_projects.append(project_name)
                 except Exception as e:
                     failed_projects[project_name] = str(e)
@@ -122,8 +128,58 @@ class StatsService:
             )
 
         # 计算贡献者统计
-        return calculate_contributors(all_commits)
+        contributors = calculate_contributors(all_commits)
+
+        for contributor in contributors:
+            contributor.setdefault('projects', [])
+            contributor.setdefault('project_names', [])
+
+        return contributors
+
+    def _extract_project_display_name(self, project_name: str) -> str:
+        """
+        提取项目显示名称（URL的最后一个路由部分）
+        
+        Args:
+            project_name: 完整的项目标识符或URL
+            
+        Returns:
+            项目的显示名称
+            
+        Examples:
+            https://gitea.zhifukj.com.cn/zhifukeji/dev-docs -> dev-docs
+            /path/to/my-project -> my-project
+            my-project -> my-project
+        """
+        # 移除URL末尾的斜杠
+        name = project_name.rstrip('/')
+        
+        # 如果是URL，移除.git后缀
+        if name.endswith('.git'):
+            name = name[:-4]
+        
+        # 提取最后一个路由部分
+        if '/' in name:
+            name = name.split('/')[-1]
+        
+        return name
     
+    def _attach_project_info(self, commits: List[Commit], project_id: str, project_name: str) -> List[Commit]:
+        # 提取项目显示名称（只保留URL的最后一部分）
+        display_name = self._extract_project_display_name(project_name)
+        
+        for commit in commits:
+            commit.project_id = project_id
+            commit.project_name = display_name
+        return commits
+
+    def _fetch_single_project_with_meta(self, project_name: str, force_refresh: bool = False) -> tuple[List[Commit], str]:
+        entry = self._resolve_project_entry(project_name, force_refresh=force_refresh)
+        repo = self.git_service.get_repo_from_path(entry.path, force_refresh=force_refresh)
+        commits = self.git_service.get_commits(repo)
+        project_registry.register_identifier(project_name, entry.path, entry.project_id)
+        return commits, entry.project_id
+
     def _fetch_single_project(self, project_name: str, force_refresh: bool = False) -> List[Commit]:
         """获取单个项目的 commit 数据并同步项目到本地缓存"""
 

@@ -107,6 +107,7 @@
     .chart-item--pie {
       min-height: 0;
       align-content: stretch;
+      max-height: 700px;
     }
 
     .chart-header {
@@ -157,51 +158,55 @@
       padding: clamp(6px, 0.9vh, 12px);
 
       > * {
-        flex: 1 1 auto;
+        flex: 0 0 600px;
         width: 100%;
-        height: 100%;
+        height: 600px;
         max-width: 100%;
-        max-height: 100%;
+        max-height: 600px;
       }
 
       svg {
         width: 100%;
-        height: 100%;
+        height: 260px;
       }
 
       svg .legend {
         transform-origin: top right;
-        transform: translate(4%, -6%) scale(1.7);
+        transform: translate(2%, -8%);
+        font-size: 228px;
       }
 
       svg .legend text {
-        font-size: clamp(1.6rem, 2.2vw, 2.6rem) !important;
         font-family: 'Pixel', sans-serif;
         dominant-baseline: middle;
+        font-size: 228px;
       }
 
-      svg .legend rect,
-      svg .legend circle,
-      svg .legend path {
-        transform-origin: center;
-        transform: scale(1.7);
-        stroke-width: 2.6;
+    }
+
+    .chart-item--pie {
+      .chart-body {
+        width: 100%;
+        position: relative;
+        padding-top: 100%;
+        margin: 0 auto;
+        display: block;
+
+        & > * {
+          position: absolute;
+          inset: clamp(2px, 0.4vh, 8px);
+          width: auto;
+          height: auto;
+        }
+
+        svg {
+          transform: translateY(0%);
+        }
       }
-    }
 
-    .chart-item--pie .chart-body {
-      width: 100%;
-      position: relative;
-      padding-top: 85%;
-      margin: 0 auto;
-      display: block;
-    }
-
-    .chart-item--pie .chart-body > * {
-      position: absolute;
-      inset: clamp(2px, 0.4vh, 8px);
-      width: auto;
-      height: auto;
+      .chart-header {
+        margin-bottom: clamp(1px, 1.2vh, 2px);
+      }
     }
   }
 
@@ -211,6 +216,7 @@
     box-shadow: none;
     border: none;
     padding: 0;
+    margin-top: clamp(-150px, -9vh, -60px);
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -257,7 +263,7 @@
       font-size: clamp(0.95rem, 1.6vw, 1.15rem);
       font-family: 'Pixel', sans-serif;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 12px;
       box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
 

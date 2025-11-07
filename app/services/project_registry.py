@@ -61,12 +61,17 @@ class ProjectRegistry:
             return ProjectEntry(normalized, project_id, path)
 
     def generate_project_id(self, seed: str) -> str:
+        """
+        生成项目唯一ID（12位哈希值）
+        
+        Args:
+            seed: 用于生成哈希的种子（通常是项目URL或路径）
+            
+        Returns:
+            12位MD5哈希值，例如: 59c55330e4d2
+        """
         seed = seed.strip()
         digest = hashlib.md5(seed.encode('utf-8')).hexdigest()[:12]
-        slug = re.sub(r'[^a-zA-Z0-9]+', '-', seed.lower()).strip('-')
-        if slug:
-            slug = slug[:48]
-            return f"{slug}-{digest}"
         return digest
 
     def register_identifier(self, identifier: str, local_path: str, project_id: Optional[str] = None) -> None:

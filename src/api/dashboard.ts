@@ -51,6 +51,34 @@ export async function fetchDashboardData(projects: string[], options: FetchOptio
   }
 }
 
+export async function fetchDefaultProjects(): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_BASE}/defaults`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+
+    if (result.code === 200) {
+      const data = result.data ?? {}
+      const projects = Array.isArray(data.projects) ? data.projects : []
+      return projects.map((item: unknown) => String(item).trim()).filter((item: string) => item.length > 0)
+    }
+
+    throw new Error(result.message || '获取默认项目失败')
+  } catch (error) {
+    console.error('获取默认项目失败:', error)
+    return []
+  }
+}
+
 /**
  * 获取贡献者列表
  * @param projects 项目列表
@@ -90,6 +118,14 @@ export async function fetchContributors(projects: string[], options: FetchOption
         commits: item.commits ?? 0,
         additions: item.additions ?? 0,
         deletions: item.deletions ?? 0,
+        projects: Array.isArray(item.projects) ? item.projects : [],
+        projectNames: Array.isArray(item.project_names) ? item.project_names : [],
+        dailyCommits: Array.isArray(item.daily_commits)
+          ? item.daily_commits.map((entry: any) => ({
+              time: typeof entry?.time === 'string' ? entry.time : '',
+              count: Number(entry?.count ?? 0),
+            }))
+          : [],
       }))
     } else {
       throw new Error(result.message || '获取数据失败')

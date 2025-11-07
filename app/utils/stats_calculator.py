@@ -4,6 +4,8 @@
 
 from typing import List, Dict, Any
 from app.models.commit import Commit
+from app.models.contributor import Contributor
+from app.utils.date_utils import is_in_last_week
 
 
 def calculate_hour_data(commits: List[Commit]) -> List[Dict[str, Any]]:
@@ -129,8 +131,6 @@ def calculate_overtime_ratio(commits: List[Commit]) -> float:
 def calculate_contributors(commits: List[Commit]) -> List[Dict[str, Any]]:
     """统计贡献者列表，基于代码变更量计算贡献度"""
 
-    from app.models.contributor import Contributor
-
     contributors_map: Dict[str, Contributor] = {}
 
     for commit in commits:
@@ -140,7 +140,16 @@ def calculate_contributors(commits: List[Commit]) -> List[Dict[str, Any]]:
                 name=commit.author_name,
                 email=email,
             )
-        contributors_map[email].add_commit(commit)
+        
+        # 判断commit是否在上周范围内
+        is_last_week_commit = is_in_last_week(commit.timestamp)
+        contributors_map[email].add_commit(commit, is_last_week=is_last_week_commit)
+
+        if commit.project_id:
+            contributors_map[email].project_ids.add(commit.project_id)
+
+        if commit.project_name:
+            contributors_map[email].project_names.add(commit.project_name)
 
     contributors = list(contributors_map.values())
 
@@ -169,6 +178,9 @@ def calculate_contributors(commits: List[Commit]) -> List[Dict[str, Any]]:
                 "commits": contributor.commits,
                 "additions": contributor.additions,
                 "deletions": contributor.deletions,
+                "projects": sorted(contributor.project_ids),
+                "project_names": sorted(contributor.project_names),
+                "daily_commits": contributor.last_week_distribution,  # 使用上周数据
             }
         )
 

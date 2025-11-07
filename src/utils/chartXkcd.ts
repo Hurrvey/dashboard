@@ -10,6 +10,8 @@ type MarginConfig = {
 interface PatchedOptions {
   chartMargins?: MarginConfig
   margins?: MarginConfig
+  legendScale?: number
+  legendFontSize?: number
 }
 
 type AnyChart = {
@@ -24,6 +26,147 @@ type AnyChart = {
   height: number
   options?: PatchedOptions
   render?: (...args: any[]) => any
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg'
+
+const LEGEND_SCALE_ATTR = 'data-legend-orig-'
+
+const cacheNumericAttr = (element: Element, attr: string): number | null => {
+  const cacheAttr = `${LEGEND_SCALE_ATTR}${attr}`
+  let value = element.getAttribute(cacheAttr)
+  if (value === null) {
+    value = element.getAttribute(attr)
+    if (value === null) {
+      return null
+    }
+    element.setAttribute(cacheAttr, value)
+  }
+
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+const setScaledAttr = (element: Element, attr: string, scale: number, override?: number | null) => {
+  const original = cacheNumericAttr(element, attr)
+  if (original === null) {
+    return
+  }
+
+  const value = override ?? original * scale
+  element.setAttribute(attr, Number.isFinite(value) ? value.toFixed(2).replace(/\.00$/, '') : String(value))
+}
+
+const cacheFontSize = (element: SVGTextElement): number | null => {
+  const cacheAttr = `${LEGEND_SCALE_ATTR}font-size`
+  let value = element.getAttribute(cacheAttr)
+  if (value === null) {
+    const styleValue = element.style.fontSize || element.getAttribute('font-size') || element.getAttribute('style')?.match(/font-size:\s*([0-9.]+)/)?.[1]
+    if (!styleValue) {
+      return null
+    }
+    value = styleValue
+    element.setAttribute(cacheAttr, value)
+  }
+
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+const findLegendSvg = (container: HTMLElement): SVGElement | null => {
+  const svgElements = Array.from(container.querySelectorAll('svg')) as SVGElement[]
+  for (const svg of svgElements.reverse()) {
+    if (svg.querySelector('rect[fill-opacity]')) {
+      return svg
+    }
+  }
+  return null
+}
+
+const applyLegendEnhancements = (container: HTMLElement | null, options?: PatchedOptions) => {
+  if (!container || !options) {
+    return
+  }
+
+  const legendScale = Number(options.legendScale ?? 1)
+  const legendFontSize = Number(options.legendFontSize ?? 0)
+
+  if (legendScale === 1 && legendFontSize <= 0) {
+    return
+  }
+
+  const legendRoot = findLegendSvg(container)
+  if (!legendRoot) {
+    return
+  }
+
+  const previousScale = Number(legendRoot.getAttribute('data-legend-applied-scale') ?? '0')
+  const previousFont = Number(legendRoot.getAttribute('data-legend-applied-font') ?? '0')
+  if (previousScale === legendScale && (legendFontSize <= 0 || previousFont === legendFontSize)) {
+    return
+  }
+
+  const backgroundRect = legendRoot.querySelector('rect[fill-opacity]') as SVGRectElement | null
+  if (!backgroundRect) {
+    return
+  }
+
+  const colorRects = Array.from(legendRoot.querySelectorAll('rect')).filter(rect => rect !== backgroundRect)
+  const texts = Array.from(legendRoot.querySelectorAll('text')) as SVGTextElement[]
+
+  colorRects.forEach(rect => {
+    setScaledAttr(rect, 'width', legendScale)
+    setScaledAttr(rect, 'height', legendScale)
+    setScaledAttr(rect, 'x', legendScale)
+    setScaledAttr(rect, 'y', legendScale)
+    setScaledAttr(rect, 'rx', legendScale)
+    setScaledAttr(rect, 'ry', legendScale)
+  })
+
+  texts.forEach(text => {
+    setScaledAttr(text, 'x', legendScale)
+    setScaledAttr(text, 'y', legendScale)
+
+    const originalFontSize = cacheFontSize(text)
+    if (originalFontSize !== null) {
+      const value = legendFontSize > 0 ? legendFontSize : originalFontSize * legendScale
+      text.style.setProperty('font-size', `${value}px`, 'important')
+    }
+  })
+
+  setScaledAttr(backgroundRect, 'width', legendScale)
+  setScaledAttr(backgroundRect, 'height', legendScale)
+  setScaledAttr(backgroundRect, 'x', legendScale)
+  setScaledAttr(backgroundRect, 'y', legendScale)
+  setScaledAttr(backgroundRect, 'rx', legendScale)
+  setScaledAttr(backgroundRect, 'ry', legendScale)
+  setScaledAttr(backgroundRect, 'stroke-width', legendScale)
+
+  const originalBackgroundWidth = cacheNumericAttr(backgroundRect, 'width') ?? 0
+  const originalBackgroundHeight = cacheNumericAttr(backgroundRect, 'height') ?? 0
+  const newBackgroundWidth = Number(backgroundRect.getAttribute('width') ?? originalBackgroundWidth)
+  const newBackgroundHeight = Number(backgroundRect.getAttribute('height') ?? originalBackgroundHeight)
+
+  const originalX = cacheNumericAttr(legendRoot, 'x') ?? 0
+  const originalY = cacheNumericAttr(legendRoot, 'y') ?? 0
+
+  const alignedRight = Math.abs(originalX) > 0.1
+  const alignedBottom = Math.abs(originalY) > 0.1
+
+  if (alignedRight) {
+    const newX = originalX + originalBackgroundWidth - newBackgroundWidth
+    legendRoot.setAttribute('x', newX.toFixed(2).replace(/\.00$/, ''))
+  }
+
+  if (alignedBottom) {
+    const newY = originalY + originalBackgroundHeight - newBackgroundHeight
+    legendRoot.setAttribute('y', newY.toFixed(2).replace(/\.00$/, ''))
+  }
+
+  legendRoot.setAttribute('data-legend-applied-scale', legendScale.toString())
+  if (legendFontSize > 0) {
+    legendRoot.setAttribute('data-legend-applied-font', legendFontSize.toString())
+  }
 }
 
 const extractTranslate = (transform: string | undefined | null) => {
@@ -171,6 +314,12 @@ const ensurePiePatched = () => {
       const translateX = marginLeft + innerSize / 2
       const translateY = marginTop + innerSize / 2
       chartSelection.attr('transform', `translate(${translateX},${translateY})`)
+    }
+
+    if (container) {
+      window.requestAnimationFrame(() => {
+        applyLegendEnhancements(container, this.options as PatchedOptions)
+      })
     }
 
     return result

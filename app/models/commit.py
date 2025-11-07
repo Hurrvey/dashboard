@@ -19,6 +19,8 @@ class Commit:
     additions: int = 0           # 新增行数
     deletions: int = 0           # 删除行数
     files_changed: int = 0       # 修改文件数
+    project_id: Optional[str] = None  # 所属项目 ID
+    project_name: Optional[str] = None  # 所属项目名
     
     @property
     def hour(self) -> int:

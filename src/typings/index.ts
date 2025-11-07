@@ -37,6 +37,9 @@ export interface Contributor {
   commits: number
   additions?: number
   deletions?: number
+  projects?: string[]
+  projectNames?: string[]
+  dailyCommits?: ChartData[]
 }
 
 /**

@@ -192,7 +192,7 @@ echo ================================================================
 echo   CODE996 数据看板 - 服务信息
 echo ================================================================
 echo.
-set "DASHBOARD_URL=http://localhost:3801/?projects=%PROJECT_ID_QUERY%"
+set "DASHBOARD_URL=http://localhost:3801/dashboard"
 echo 📊 数据看板地址:
 echo    %DASHBOARD_URL%
 echo.

@@ -22,6 +22,8 @@ const chartOptions = {
   legendPosition: 1,
   dataColors: ['#27A3DD', '#DD4526'],
   chartMargins: { top: 0, right: 0, bottom: 0, left: 0 },
+  legendScale: 2.4,
+  legendFontSize: 28,
 }
 </script>
 
@@ -41,22 +43,12 @@ const chartOptions = {
 
   :deep(svg .legend) {
     transform-origin: top right;
-    transform: translate(4%, -6%) scale(1.7);
+    transform: translate(2%, -8%);
   }
 
   :deep(svg .legend text) {
-    font-size: clamp(1.6rem, 2.2vw, 2.6rem) !important;
     font-family: 'Pixel', sans-serif;
     dominant-baseline: middle;
   }
-
-  :deep(svg .legend rect),
-  :deep(svg .legend circle),
-  :deep(svg .legend path) {
-    transform-origin: center;
-    transform: scale(1.7);
-    stroke-width: 2.6;
-  }
 }
 </style>
-

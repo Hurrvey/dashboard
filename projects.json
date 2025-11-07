@@ -7,10 +7,7 @@
       "✅ 远程Git URL: https://github.com/user/repo (推荐)",
       "✅ 相对路径: 相对于工作目录（默认 ./repos/）",
       "✅ 绝对路径: 使用系统绝对路径"
-    ],
-    "使用方法": "也可以直接在URL参数中使用完整的Git URL，无需配置"
-  },
-
-  "dev-docs": "./repos/dev-docs"
+    ]
+  }
 }
 

@@ -86,7 +86,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { fetchDashboardData, fetchContributors, fetchAIRatio } from '../api/dashboard'
+import { fetchDashboardData, fetchContributors, fetchAIRatio, fetchDefaultProjects } from '../api/dashboard'
 import { getCurrentTimeString } from '../utils/time'
 import BarChart from '../components/charts/BarChart.vue'
 import PieChart from '../components/charts/PieChart.vue'
@@ -114,6 +114,9 @@ const updateTime = () => {
 }
 
 // 从 URL 获取项目列表
+const defaultProjects = ref<string[]>([])
+const defaultProjectsLoaded = ref(false)
+
 const getProjectsFromURL = (): string[] => {
   const urlParams = new URLSearchParams(window.location.search)
   const projectsParam = urlParams.get('projects')
@@ -121,6 +124,25 @@ const getProjectsFromURL = (): string[] => {
     return []
   }
   return projectsParam.split(',').map(p => p.trim()).filter(p => p)
+}
+
+const resolveProjects = async (forceRefresh = false): Promise<string[]> => {
+  const urlProjects = getProjectsFromURL()
+  if (urlProjects.length) {
+    return urlProjects
+  }
+
+  if (forceRefresh) {
+    defaultProjectsLoaded.value = false
+  }
+
+  if (!defaultProjectsLoaded.value) {
+    const fetched = await fetchDefaultProjects()
+    defaultProjects.value = fetched
+    defaultProjectsLoaded.value = true
+  }
+
+  return defaultProjects.value
 }
 
 // 初始化数据
@@ -135,9 +157,9 @@ const initDashboard = async (options: InitOptions = {}) => {
   loadingMessage.value = '正在加载数据...'
   aiRatioData.value = null
   try {
-    const projects = getProjectsFromURL()
+    const projects = await resolveProjects(forceRefresh)
     if (!projects.length) {
-      throw new Error('未检测到 projects 参数。请按 http://localhost:3801/?projects=test1,test2 的格式在地址栏指定项目。')
+      throw new Error('未检测到可用的项目配置。请访问 http://localhost:3801/dashboard 并在服务端配置 DEFAULT_PROJECTS 或 projects.json。')
     }
 
     if (projects.some(project => project.startsWith('http'))) {

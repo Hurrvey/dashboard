@@ -4,6 +4,10 @@ import Dashboard from '../views/Dashboard.vue'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
+    redirect: to => ({ path: '/dashboard', query: to.query }),
+  },
+  {
+    path: '/dashboard',
     name: 'Dashboard',
     component: Dashboard,
   },

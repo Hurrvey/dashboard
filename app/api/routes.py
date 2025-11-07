@@ -5,6 +5,8 @@ API 路由定义
 from flask import Blueprint, request
 from app.api.validators import validate_projects_param
 from app.api.responses import success_response, error_response
+from app.settings import Config
+from app.config.projects import projects_config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,33 @@ def init_services(stats_svc, cache_svc):
 def _parse_force_refresh() -> bool:
     value = request.args.get('force_refresh', '').lower()
     return value in ('1', 'true', 'yes', 'y')
+
+
+def _resolve_default_projects() -> list[str]:
+    configured = [project for project in Config.DEFAULT_PROJECTS if project]
+    if configured:
+        return configured
+
+    fallback: list[str] = []
+    seen = set()
+    project_map = projects_config.list_projects()
+
+    for name, location in project_map.items():
+        candidate = (location or '').strip()
+        if not candidate:
+            continue
+
+        lower_value = candidate.lower()
+        if lower_value.startswith(('http://', 'https://', 'git@', 'ssh://', 'git://')):
+            identifier = candidate
+        else:
+            identifier = name.strip()
+
+        if identifier and identifier not in seen:
+            seen.add(identifier)
+            fallback.append(identifier)
+
+    return fallback
 
 
 @api_bp.route('/summary', methods=['GET'])
@@ -89,6 +118,19 @@ def get_summary():
     except Exception as e:
         logger.error(f"服务器错误: {str(e)}", exc_info=True)
         return error_response(500, "服务器内部错误")
+
+
+@api_bp.route('/defaults', methods=['GET'])
+def get_default_projects():
+    try:
+        projects = _resolve_default_projects()
+        return success_response({
+            "projects": projects,
+            "count": len(projects),
+        })
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("获取默认项目失败: %s", exc, exc_info=True)
+        return error_response(500, "获取默认项目失败")
 
 
 @api_bp.route('/contributors', methods=['GET'])

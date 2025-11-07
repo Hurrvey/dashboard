@@ -16,6 +16,7 @@ const chartOptions = {
   backgroundColor: 'transparent',
   strokeColor: '#fff',
   unxkcdify: false,
+  yTickCount: 5,
   chartMargins: {
     top: 12,
     right: 12,

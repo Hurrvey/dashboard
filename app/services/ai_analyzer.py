@@ -13,7 +13,6 @@ import requests
 from app.settings import (
     _optional_int,
     DEFAULT_AI_ANALYZER_ENDPOINT,
-    DEFAULT_AI_ANALYZER_API_KEY,
     DEFAULT_AI_ANALYZER_MODEL,
 )
 
@@ -24,7 +23,6 @@ logger = logging.getLogger('code996.services.ai_analyzer')
 @dataclass
 class AnalyzerConfig:
     endpoint: str
-    api_key: str
     model: str
     max_tokens: int = 4096
     timeout: int = 60
@@ -36,7 +34,7 @@ class AnalyzerConfig:
 class AIAnalyzer:
     def __init__(self, config: Optional[AnalyzerConfig]) -> None:
         self.config = config
-        self.enabled = config is not None and all([config.endpoint, config.api_key, config.model])
+        self.enabled = config is not None and all([config.endpoint, config.model])
 
         if not self.enabled:
             logger.warning("AIAnalyzer 未启用，缺少必要配置")
@@ -54,7 +52,7 @@ class AIAnalyzer:
                 },
                 {
                     "role": "user",
-                    "content": f"【TASK】\nDetect the proportion of AI-generated content in uploaded files (such as code, documents, etc.).\n【REQUIRE】\nReturn only the percentage.Now, please read the text and return the results.\n【TEXT】\n{content}",
+                    "content": f"【TASK】\nDetect the proportion of AI-generated content in【TEXT】.\n【REQUIRE】\n1.Return only the percentage.\n2.Regardless of the length or size of the text, it must be returned as AI-generated.If it is not possible to determine the AI-generated proportion, return 50% directly. \nNow, please read the text and return the results.\n【TEXT】\n{content}",
                 },
             ],
             "max_tokens": self.config.max_tokens,
@@ -62,7 +60,6 @@ class AIAnalyzer:
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.config.api_key}",
         }
 
         try:
@@ -126,18 +123,16 @@ def build_analyzer_from_env() -> AIAnalyzer:
         return value.strip()
 
     endpoint = _env_or_default('AI_ANALYZER_ENDPOINT', DEFAULT_AI_ANALYZER_ENDPOINT)
-    api_key = _env_or_default('AI_ANALYZER_API_KEY', DEFAULT_AI_ANALYZER_API_KEY)
     model = _env_or_default('AI_ANALYZER_MODEL', DEFAULT_AI_ANALYZER_MODEL)
 
     max_tokens = int(os.getenv('AI_ANALYZER_MAX_TOKENS', 4096))
     timeout = int(os.getenv('AI_ANALYZER_TIMEOUT', 60))
 
-    if not all([endpoint, api_key, model]):
+    if not all([endpoint, model]):
         return AIAnalyzer(None)
 
     config = AnalyzerConfig(
         endpoint=endpoint,
-        api_key=api_key,
         model=model,
         max_tokens=max_tokens,
         timeout=timeout,

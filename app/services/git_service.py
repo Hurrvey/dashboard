@@ -23,8 +23,11 @@ class GitService:
             workspace_dir: Git仓库工作目录
         """
         self.workspace_dir = workspace_dir
+        self.mirror_dir = os.path.join(workspace_dir, '_mirror')
         os.makedirs(workspace_dir, exist_ok=True)
+        os.makedirs(self.mirror_dir, exist_ok=True)
         logger.info(f"Git工作目录: {workspace_dir}")
+        logger.info(f"Git镜像目录: {self.mirror_dir}")
     
     def get_or_clone_repo(self, repo_url: str, project_name: str, force_refresh: bool = False) -> Repo:
         """
@@ -32,12 +35,15 @@ class GitService:
         
         Args:
             repo_url: 仓库 URL
-            project_name: 项目名称（用作本地目录名）
+            project_name: 项目ID（用作本地目录名）
         
         Returns:
             Repo: GitPython 仓库对象
+        
+        Note:
+            所有在线项目都存储在 repos/_mirror/<project_id>/ 目录下
         """
-        repo_path = os.path.join(self.workspace_dir, project_name)
+        repo_path = os.path.join(self.mirror_dir, project_name)
         
         # 强制刷新：删除已有仓库，重新克隆
         if force_refresh and os.path.exists(repo_path):
